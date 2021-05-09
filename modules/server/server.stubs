@@ -1,0 +1,242 @@
+### $Id: server.stubs,v 1.15 2003/06/10 14:53:48 wd Exp $
+ac.package server
+
+alias who (flags, args) {
+    if (left(1 $flags) == [-]) {
+	if (flags == [-v]) {
+	    @a.server.who.verbose = 1
+	} elsif (flags == [-f]) {
+	    //who -flush
+	    return
+	} else {
+	    @a.server.who.verbose = 0
+	}
+    } else if (flags != []) {
+	@:args = [$flags $args]
+    }
+
+    switch ($a.network.get_cap(h)) {
+	(d) {
+	    @:flags = [-dx]
+	}
+	(u) {
+	    @:flags = [-ux]
+	}
+	(*) {
+	    @:flags = []
+	}
+    }
+
+    if (args == []) {
+	@:args = builtin_expando(C)
+    }
+    # now do the real thing.. quoting hell applied here.
+    @a.server.whocnt = 0
+    //^who -line {a.server.who_add $*} -end {a.server.who_end $*} $flags $args
+}
+
+alias a.server.who_add {
+    @setitem(a.server.who $a.server.whocnt $0 $2 $1 $3-4  $a.network.gss($5) $7-)
+    @a.server.whocnt++
+}
+
+alias a.server.who_end {
+    @:i = 0
+    a.box.start who $1
+    while (i < a.server.whocnt) {
+	@:s = getitem(a.server.who $i)
+	if (a.server.who.verbose) {
+	    a.box.echo $(col2)$word(0 $s) $(dcol2)$pass(@+ $word(1 $s))$(hcol2)$word(2 $s)$(dcol1)!$(ncol)$word(3 $s)$(dcol1)@$(ncol)$word(4 $s) $(col2)$word(5 $s)$(ncol) $restw(6 $s)
+	} else {
+	    a.box.echo $(col2)$word(0 $s) $(dcol2)$pass(@+ $word(1 $s))$(hcol2)$word(2 $s)$(dcol1)!$(ncol)$word(3 $s)$(dcol1)@$(ncol)$word(4 $s) $(col2)$word(5 $s)
+	}
+	@:i++
+    }
+    a.box.end $a.server.whocnt matches
+    @a.server.whocnt = 0
+}
+									    
+### links/map stuff, nifty-fun
+### both commands use the internal alias a.retrieve_links,
+### which calls the proper display alias for that particular
+### command
+
+alias a.server.retrieve_links {
+    ^on ^364 * {
+	@:client = [$1]
+	@:hub = [$2]
+	@:hops = [$3]
+	@:gecos = [$4-]
+
+	@a.server.links.all #= [$client ]
+	@:henc = ac.encode($hub)
+	@:cenc = ac.encode($client)
+	@a.server.links[$cenc][hub] = hub
+	@a.server.links[$cenc][hops] = hops
+	@a.server.links[$cenc][info] = gecos
+	if (hops == 0) {
+	    return
+	}
+
+	@push(a.server.links[$cenc][servers] $hub)
+	@push(a.server.links[$henc][servers] $client)
+    }
+    ^eval on ^365 "*" a.server.finish_links $*
+    //^links
+}
+
+alias a.server.finish_links {
+    ^on 364 -"*"
+    ^on 365 -"*"
+    for xx in ($a.server.links.all) {
+	@:senc = ac.encode($xx)
+	@a.server.links[$senc][servers] = uniq($a.server.links[$senc][servers])
+	if (numwords($a.server.links[$ac.encode($xx)][servers]) > 1) {
+	    @push(a.server.links.hubs $xx)
+	}
+    }
+    # sort our hubs by distance in hops
+    @:hops = 0
+    @:newlist = []
+    while (sort($newlist) != sort($a.server.links.hubs)) {
+	@:new = []
+	for xx in ($a.server.links.hubs) {
+	    if (a.server.links[$ac.encode($xx)][hops] == hops) {
+		@push(:new $xx)
+	    }
+	}
+	if (new != []) {
+	    @push(:newlist $new)
+	}
+	@:hops++
+    }
+    @a.server.links.hubs = newlist
+    $*
+    fe ($aliasctl(assign pmatch a.server.links*)) xx {
+	^assign -$xx
+    }
+}
+
+alias links (args) {
+    if (args == []) {
+	@a.server.links.type = ac.config(links_default_type)
+    } else if (args == [-s]) {
+	@a.server.links.type = [s]
+    } else if (args == [-t]) {
+	@a.server.links.type = [t]
+    } else {
+	@a.server.links.type = [l]
+    }
+    a.server.retrieve_links a.server.links
+}
+
+alias a.server.links {
+    @:net = a.network.get()
+    if (net != []) {
+	@:serv = a.network.get_list($net)
+	@:new = []
+	@:missing = []
+	fe ($remws($serv / $a.server.links.all)) xx {
+	    @push(:new $a.network.gss($xx))
+	}
+	fe ($remws($a.server.links.all / $serv)) xx {
+	    @push(:missing $a.network.gss($xx))
+	}
+    }
+
+    a.box.start link list \($net\)
+    ### if we only have one server, well, just throw it out there..
+    if (numwords($a.server.links.all) == 1) {
+	a.box.echo $a.network.gss($a.server.links.all)
+    } else {
+	### if our server is a hub but only has one client (that being another
+	### hub) remove its hub status and set it as a leaf for the other hub
+	@:c = builtin_expando(S)
+	if (numwords($a.server.links[$ac.encode($c)][servers]) == 1) {
+	    @a.server.links.hubs = remw($c $a.server.links.hubs)
+	}
+
+	if (a.server.links.type == [t]) {
+	    a.list.start hu $numwords($a.server.links.hubs)
+	    @:max = 0
+	    for xx in ($a.server.links.hubs) {
+		if (numwords($a.server.links[$ac.encode($xx)][servers]) > max) {
+		    @:max = numwords($a.server.links[$ac.encode($xx)][servers])
+		}
+		a.list.hdr $a.network.gss($xx)
+	    }
+	    for (@:i = 0,i < max,@:i++) {
+		for xx in ($a.server.links.hubs) {
+		    a.list.add $a.network.gss($word($i $a.server.links[$ac.encode($xx)][servers]))
+		}
+	    }
+	    a.list.end
+	} else if (a.server.links.type == [s]) {
+	    a.list.start hu 3
+	    a.list.hdr client
+	    a.list.hdr hub
+	    a.list.hdr hops/gecos
+	    for xx in ($a.server.links.all) {
+		@:senc = ac.encode($xx)
+		a.list.add $xx
+		a.list.add $a.server.links[$senc][hub]
+		a.list.add $a.server.links[$senc][hops] $a.server.links[$senc][info]
+	    }
+	    a.list.end
+	} else {
+	    for xx in ($a.server.links.hubs) {
+		@:henc = ac.encode($xx)
+		a.box.echo $(dcol1)[$(hcol1)$a.network.gss($xx)$(dcol1)]$(ncol) $sar(/$a.network.gss($builtin_expando(S))/$(hcol2)$a.network.gss($builtin_expando(S))$(ncol)/$a.network.gss($a.server.links[$henc][servers]))
+	    }
+	}
+    }
+    if (new != []) {
+	a.box.echo new: $new
+    }
+    if (missing != []) {
+	a.box.echo missing: $missing
+    }
+    a.box.end $#a.server.links.all servers
+}
+
+alias map {
+    a.server.retrieve_links a.server.map
+}
+
+### this displays a single branch of a map.  I changed this alias slightly (to
+### make it work properly) after observing the way Liandrin's script worked.
+alias a.server.map_branch (server, prefix) {
+    @push(a.server.links.seen $server)
+    @:senc = ac.encode($server)
+    a.box.echo $prefix$server \($a.server.links[$senc][hops] $a.server.links[$senc][info]\)
+    @:servers = remws($a.server.links.seen / $a.server.links[$senc][servers])
+    if (numwords($servers) == 0) {
+	return
+    }
+    @:prefix = msar(/`-/  /-/ /$prefix)
+
+    for xx in ($servers) {
+	if (xx == rightw(1 $servers)) {
+	    a.server.map_branch $xx $prefix`-
+	} else {
+	    a.server.map_branch $xx $prefix|-
+	}
+    }
+}
+
+
+alias a.server.map (server) {
+    if (server == []) {
+	@:server = builtin_expando(S)
+    }
+
+    if (findw($server $a.server.links.all) == -1) {
+	aerrecho server $server does not appear to be online
+	return
+    }
+    a.box.start server map
+    a.server.map_branch $server
+    a.box.end
+}
+	
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

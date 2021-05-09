@@ -1,0 +1,226 @@
+### $Id: ignore.am,v 1.6 2002/02/05 03:59:56 wd Exp $
+
+:new module ignore
+:mod ignore version 6
+:mod ignore desc wrapper for the client's ignore list
+:mod ignore author wd@anduril.org White_Dragon Chip Norkus
+:mod ignore depend box save usage
+:mod ignore save_cmd a.ignore.save
+
+:new config ignore_types the default types used with /ignore
+:conf ignore_types value msgs public ctcps
+:conf ignore_types flags si
+:conf ignore_types help \
+this sets the default ignore-types (see /man ignore) to be used with \
+/ignore, if none are provided.
+
+:new config ignore_mask mask type to use with /ignore
+:conf ignore_mask value 3
+:conf ignore_mask flags n
+:conf ignore_mask help \
+this sets the default mask type (see /man 6 mask) when ignoring someone.
+
+:new command ignore [-][nick|mask|channel|#] [for time] [types]
+:comm ignore desc a wrapper to the client's ignore with added functionality
+:comm ignore aliases tignore pignore unignore
+:comm ignore flags i
+:comm ignore help \
+this command has four different interfaces, the first is the most complete \
+(/ignore).  The simplest form is just '/ignore person', which will ignore \
+the given person until the client exists.  You can also do '/ignore person \
+for <time>' which will ignore that person for a set amount of time. \
+Additionally, you can do '/ignore person for ever' (or forever) to ignore \
+said person forever (these ignores are saved and loaded when the client \
+starts, so they are persistent over restarts).  To list ignores, simply \
+issue the command with no arguments, and to remove an ignore, use '/ignore \
+-person' (Which will do the right thing with timers/permanence as well). \
+You can also provide a number (shown from /ignore), instead of a person/mask \
+The other commands are quick interfaces to the different functionality of \
+ignore.  '/tignore person time' is shorthand for '/ignore person for time'.  \
+'/pigonre person' is shorthand for '/ignore person forever', and lastly, \
+'/unignore person' is shorthand for '/ignore -person'
+
+alias tignore (mask, time, types) {
+	if (time == []) {
+		@usage(ignore)
+	} else {
+		ignore $mask for $time $types
+	}
+}
+
+alias pignore (mask, types) {
+	if (mask == []) {
+		@usage(ignore)
+	} else {
+		ignore $mask forever $types
+	}
+}
+
+alias unignore (mask) {
+	if (mask == []) {
+		@usage(ignore)
+	} else {
+		ignore -$mask
+	}
+}
+
+alias ignore (mask, stuff) {
+	if (mask == []) {
+		@a.ignore.show()
+		return
+	}
+
+	if (left(1 $mask) == [-]) {
+		@:remove = 1
+		@mask = rest(1 $mask)
+		if (isnumber($mask)) {
+			@:num = mask
+			@:mask = word(${mask - 1} $igmask(*))
+			if (mask == []) {
+				aerrecho no such ignore #$num
+				return
+			}
+		}
+	} else {
+		if (match(*@* $mask) && index(! $mask) == -1)) {
+			@:mask = [*!] ## mask
+		}
+	}
+
+	if (!match(*!*@* $mask) && !ischannel($mask)) {
+		userhost $mask -cmd {
+			if ([$3] == [<UNKNOWN>]) {
+				aerrecho could not find nick $0
+				@a.ignore.mask = []
+			} else {
+				@a.ignore.mask = [$0!$3@$4]
+			}
+		}
+		wait
+		@:mask = a.ignore.mask
+		if (mask == []) {
+			return
+		}
+
+		if (remove) {
+			fe ($rigmask($mask)) xx {
+				ignore -$xx
+			}
+			return
+		} else {
+			@:mask = mask($ac.config(ignore_mask) $mask)
+		}
+	}
+
+	if (remove) {
+		a.ignore.remove $mask
+		return
+	}
+
+	# got a mask, now process the 'stuff'
+	@:time = 0
+	if (word(0 $stuff) == [forever]) {
+		@:time = -1
+		@shift(stuff)
+	} elsif (word(0 $stuff) == [for]) {
+		@shift(stuff)
+		@:time = shift(stuff)
+		if (time == [ever]) {
+			@:time = -1
+		} else {
+			@:time = rtdiff($time)
+		}
+	}
+	if (time == [ever]) {
+		@:time = -1
+	}
+	if (stuff == []) {
+		@stuff = ac.config(ignore_types)
+	}
+	
+	# got a time, the masks are in $stuff, now handle
+	if (time == -1) {
+		@push(a.ignore.perm $mask $sar(g/ /,/$stuff))
+		@:type = [permanent ]
+	} elsif (time != 0) {
+		@push(a.ignore.timed $mask $time $time())
+		//^timer -ref ign$ac.hash($mask) $time ignore -$mask
+		@:type = [timed \($tdiff4($time)\) ] 
+	}
+	//^ignore $mask $stuff
+	aecho added $type\ignore for $mask \($tolower($restw(0 $igtype($mask)))\)
+}
+	
+alias a.ignore.show {
+	@:list = igmask(*)
+	if (list == []) {
+		aecho no ignores currently active
+		return
+	}
+
+	a.list.start n 3 ignores
+	a.list.hdr mask
+	a.list.hdr time
+	a.list.hdr types
+	fe ($list) xx {
+		a.list.add $tolower($xx)
+		if (findw($xx $a.ignore.perm) != -1) {
+			a.list.add forever
+		} elsif (findw($xx $a.ignore.timed) != -1) {
+			@:w = findw($xx $a.ignore.timed)
+			@:time = [$tdiff4($word(${w + 1} $a.ignore.timed)) ]
+			@:w = word(${w + 1} $a.ignore.timed) - (time() - word(${w + 2} $a.ignore.timed))
+			@:time #= [\($tdiff4($w) left\)]
+			echo $time $w
+			a.list.add $time
+		} else {
+			a.list.add 0
+		}
+		a.list.add $tolower($restw(0 $igtype($xx)))
+	}
+	a.list.end $numwords($list) ignore${numwords($list) == 1 ? [] : [s]}
+}
+
+alias a.ignore.remove (mask) {
+	if (igmask($mask) == []) {
+		aerrecho no ignore for $mask
+		return
+	}
+	
+	@:w = findw($mask $a.ignore.perm)
+	if (w != -1) {
+		@a.ignore.perm = remw($mask $a.ignore.perm)
+		@a.ignore.perm = remw($word($w $a.ignore.perm) $a.ignore.perm)
+		@:type = [permanent]
+	} else {
+		@:w = findw($mask $a.ignore.timed)
+		if (w != -1) {
+			@a.ignore.timed = remw($mask $a.ignore.timed)
+			@a.ignore.timed = remw($word($w $a.ignore.timed) $a.ignore.timed)
+			@a.ignore.timed = remw($word($w $a.ignore.timed) $a.ignore.timed)
+			^timer -del ign$ac.hash($mask)
+			@:type = [timed]
+		}
+	}
+
+	//^ignore $mask NONE
+	aecho removed $type ignore for $tolower($mask)
+}
+
+alias a.ignore.save {
+	if (a.ignore.perm == []) {
+		return
+	}
+	@:fd = a.save.open($apath/etc/ignores ignores)
+	@write($fd ^assign a.ignore.perm $a.ignore.perm)
+	@close($fd)
+}
+
+if (fexist($apath/etc/ignores) != -1) {
+	load $apath/etc/ignores
+	fe ($a.ignore.perm) mask types {
+		//^ignore $mask $tr(/,/ /$types)
+	}
+}
+
+# vim: syntax=off ts=3 ai smartindent

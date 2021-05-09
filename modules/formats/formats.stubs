@@ -1,0 +1,197 @@
+### $Id: formats.stubs,v 1.10 2002/04/02 02:44:22 wd Exp $
+ac.package formats
+
+alias flist (format, args) {
+    if (format == [] || format == [-a]) {
+	a.list.start u 0 anduril formats
+	### find important formats
+	fe ($ac.format.list) xx {
+	    if ((format == [] && index(i $formats[$xx][flags]) != -1) || \
+		 (format == [-a] && index(% $formats[$xx][flags]) == -1)) {
+		@:s #= [$xx ]
+	    }
+	}
+	@:s = sort($s)
+	fe ($s) xx {
+	    a.list.add $xx
+	}
+	a.list.end
+	return				
+    }
+    if (format == [-m]) {
+	if (!ac.module.find($args)) {
+	    aerrecho No such module $args
+	    return
+	}
+	a.list.start n 0 formats for module $args
+	fe ($modules[$args][formats][list]) xx {
+	    if (index(% $formats[$xx][flags])==[-1]) {
+		@:s #= [$xx ]
+	    }
+	}
+	@:s = sort($s)
+	fe ($s) xx {
+	    a.list.add $xx
+	}
+	a.list.end
+	return
+    }
+    if (format == [-f]) {
+	@:f = ac.format.find($args)
+	if (!f) {
+	    aerrecho No such format $args
+	    return
+	}
+	if ([$#f] > 1) {
+	    aerrecho format name $format is ambiguous
+	    return
+	}
+	@:i = 0
+
+	if (formats[$f][list_command]) {
+	    $(formats[$f][list_command])
+	    return
+	}
+
+	### push all format assigns onto a stack
+	fe ($f $formats[$f][slaves]) xx {
+	    stack push assign format_$xx
+	}
+	if (!formats[$f][display_command]) {
+	    if (formats[$f][slaves]) {
+		a.list.start mn ${numwords($formats[$f][slaves])+1} formats for $f
+	    } else {
+		a.list.start n 1 formats for $f
+	    }
+	    while (i<formats[$f][formats][count]) {
+		@fset($f $formats[$f][formats][$i])
+		a.list.add $fparse($f $formats[$f][variables][list])
+		### respect slaves
+		if (formats[$f][slaves]) {
+		    fe ($formats[$f][slaves]) xx {
+			@fset($xx $formats[$xx][formats][$i])
+			a.list.add $fparse($xx $formats[$xx][variables][list])
+		    }
+		}
+		@:i++
+	    }
+	    a.list.end
+	} else {
+	    aecho formats for type ${f}:
+	    while (i<formats[$f][formats][count]) {
+		@fset($f $formats[$f][formats][$i])
+		### respect slaves
+		if (formats[$f][slaves]) {
+		    fe ($formats[$f][slaves]) xx {
+			@fset($xx $formats[$xx][formats][$i])
+		    }
+		}
+
+		aecho $f format #${i + 1}
+		$formats[$f][display_command] $f $i
+		@:i++
+	    }
+	}
+
+	### now set things back to normal.
+	fe ($f $formats[$f][slaves]) xx {
+	    stack pop assign format_$xx
+	}
+	return
+    }
+    @:x = ac.format.find($format)
+    if (!x || #x > 1) {
+	@:x = ac.module.find($format)
+	if (!x) {
+	    aerrecho No such module or format $format
+	    return
+	} else {
+	    flist -m $format
+	}
+    } else {
+	if (#x > 1) {
+	    aerrecho format name $format is ambiguous
+	    return
+	}
+	flist -f $format
+    }			
+}
+
+alias format (format, args, color, cargs) {
+    if (color != []) {
+	if (color == [color]) {
+	    color $cargs format $format $args
+	    return
+	}
+	@usage(format)
+	return
+    }
+
+    if (format == []) {
+	flist
+	return
+    }
+    @:f = ac.format.find($format)
+    if (!f) {
+	aerrecho no such format $format
+	return
+    }
+    if (#f > 1) {
+	# new behavior, if this is a mask, re-run the format command for each
+	# argument given, if there is an $args too
+	if (ismask($format)) {
+	    fe ($f) xx {
+		format $xx $args-
+	    }
+	    return
+	} else {
+	    aerrecho format name $format is ambiguous \(matches $f\)
+	}
+	return
+    }
+
+    if (args == []) {
+	if (formats[$f][slaves]) {
+	    aecho formats of type $f, and slaves $formats[$f][slaves] are:
+	} else {
+	    aecho format of type $f is:
+	}
+	if (formats[$f][display_command]) {
+	    $(formats[$f][display_command])
+	} else {
+	    aecho $fparse($f $formats[$f][variables][list])
+	    if (formats[$f][slaves]) {
+		fe ($formats[$f][slaves]) xx {
+		    aecho $fparse($xx $formats[$xx][variables][list])
+		}
+	    }
+	}
+	return
+    }
+    @:i = args - 1
+    if (i >= formats[$f][formats][count]) {
+	aerrecho index for format $f too high. max: $formats[$f][formats][count]
+	return
+    }
+
+    # respect slaves.
+    if (formats[$f][slaves]) {
+	### this crap can get noisy, set a local silent variable
+	### during recursive calls
+	@shaddup++
+	fe ($formats[$f][slaves]) xx {
+	    format $xx $args
+	}
+	^assign -shaddup
+    }
+    @fset($f $formats[$f][formats][$i])
+    if (formats[$f][set_command]) {
+	$(formats[$f][set_command]) $i
+    }
+
+    if (!shaddup) {
+	aecho set format for type $f to $args
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,90 @@
+#############################################################################
+### $Id: format,v 1.3 2001/10/28 10:11:49 wd Exp $
+###
+### format related aliases, these are scary and painful :)
+ac.package
+
+###
+### ac.format.find(format)
+### returns the format name if it is found.  if an exact format
+### of the specified name exists, it returns that.  Otherwise it
+### tries to use what was given as the first part of a name, and returns
+### anything whose beginning matches what is given
+###
+
+alias ac.format.find {
+    if (formats[$0][name]) {
+	return $formats[$0][name]
+    } elsif (index(* $0)==[-1] && index(? $0)==[-1]) {
+	return $pattern($0* $ac.format.list)
+    } else {
+	return $pattern($0 $ac.format.list)
+    }
+}
+
+###
+### ac.format.add(formattype, format)
+### adds the specified format as a possible format for formattype (huh? ;)
+### returns 1 if successful, 0 otherwise
+###
+
+alias ac.format.add {
+    if (!ac.format.find($0)) {
+	return 0
+    } elsif ([$1] == []) {
+	### there are some cases where we don't want anything,
+	### a placeholder basically.
+	@formats[$0][formats][$formats[$0][formats][count]] = []
+	@formats[$0][formats][count]++
+	return 1
+    }
+	
+    ### to eat the right whitespace, but leave the rest, we do this:
+    ### restw(0 ...) eats initial whitespace, then we index to the next
+    ### space, and take everything after that
+    @:f = restw(0 $*)
+    @formats[$0][formats][$formats[$0][formats][count]] = rest(${index(" " $f)+1} $f)
+    @formats[$0][formats][count]++
+    return 1	
+}
+
+###
+### fset(formattype, format)
+### sets the current format for 'formattype' to 'format'
+### returns 1 unless some error occured, in which case it returns 0
+###
+
+alias fset {
+    if (ac.format.find($0) == []) {
+	return 0
+    }
+    
+    @:i=0
+    # to preserve spaces, we have to do something like ac.format.add again
+    @:f=rest(${index(" " $*)+1} $*)
+    while (i < formats[$0][variables][count] - 1) {
+	@sar(gr/$formats[$0][variables][$i]/$$\(${i}\)/f)
+	@:i++
+    }
+
+    @sar(gr/$formats[$0][variables][$i]/$$\(${i}-\)/f)
+	
+    ### though it hasn't come up (for me), there would be a
+    ### problem with double quotes (") in formats, solve
+    ### that problem here ... actually I think it did come up later anyhow!
+	
+    @format_$(0) = [$^"f]
+    return 1
+}
+
+###
+### fpars(formattype, args)
+### returns a formatted string using the current format for 'formattype' 
+###
+
+alias fparse (fmt, args) {
+    return $cparse("%N$(format_$fmt)" $args)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

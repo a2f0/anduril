@@ -1,0 +1,4 @@
+# formats for type network_info
+ac.format.add         network_info server @server@$(dcol1)\(%n@version@$(dcol1))%n seems to be on network $(hcol1)@network@
+# ---
+

@@ -1,0 +1,172 @@
+### $Id: status.am,v 1.22 2002/11/17 08:38:59 wd Exp $
+
+:new module status
+:mod status version 38
+:mod status desc status bar module
+:mod status author wd@anduril.org White_Dragon Chip Norkus
+
+### various status settings
+set status_does_expandos on
+set status_no_repeat off
+set reverse_status_line off
+
+### variables for background/foreground colors
+fe (0 1 2 3 4 5 6 7) xx {
+	@bg$(xx) = cparse(%N%$xx)
+}
+
+for (@:i = 0,i < 16,@i++) {
+	@fg$(i) = cparse(%N%$word($i k r g y m b c w K R G Y M B C W))
+}
+
+
+### configs for window stuff
+
+alias a.status_double_chng_cmd {
+	if (ac.config(status_double)) {
+		fe ($winrefs()) xx {
+			^window $xx double on
+		}
+	}{
+		fe ($winrefs()) xx {
+			^window $xx double off
+		}
+	}
+}
+
+:new config status_double use double status bars?
+:conf status_double value 1
+:conf status_double flags bit
+:conf status_double change_cmd a.status_double_chng_cmd
+
+### sneaky commands and stuff
+
+:new command status [#]
+:comm status desc change the status bar
+:comm status aliases sbar
+:comm status help \
+this command can be used to change status bars (that is the /status number) \
+type, or can be used to turn items on/off in status bars via: /status set \
+<item> [on|off] (if no state is given, the current state is \
+displayed).  For a full list of items, simply use /status set
+
+alias status (cmd, item, arg) {
+	if (cmd == []) {
+		flist status
+		return
+	} elsif (isnumber($cmd)) {
+		if (cmd <= 0 || cmd > formats[status][formats][count]) {
+			aerrecho only status bar formats 1 through $formats[status][formats][count] are available
+			return
+		}
+		format status $cmd
+		return
+   }
+}
+
+### this is the wrapper format for everything, it actually has no format
+:new format status status bar format
+:form status flags i
+:form status display_command a.status_display
+:form status set_command a.status_set
+:form status list_command a.status_list
+:form status slaves status_format1 status_format2 input_prompt status_away status_channel status_clock status_hold status_insert status_mail status_mode status_notify status_overwrite status_query status_scrollback status_server status_umode status_window other_status
+
+### and a ton of formats
+:new format input_prompt
+:form input_prompt flags %
+
+:new format status_format1
+:form status_format1 flags %
+
+:new format status_format2
+:form status_format2 flags %
+
+:new format status_away 
+:form status_away flags %
+
+:new format status_channel
+:form status_channel flags %
+
+:new format status_clock
+:form status_clock flags %
+
+:new format status_hold
+:form status_hold flags %
+
+:new format status_insert
+:form status_insert flags %
+
+:new format status_mail
+:form status_mail Flags %
+
+:new format status_mode
+:form status_mode flags %
+
+:new format status_notify
+:form status_notify flags %
+
+:new format status_overwrite
+:form status_overwrite flags %
+
+:new format status_query
+:form status_query Flags %
+
+:new format status_scrollback
+:form status_scrollback flags %
+
+:new format status_server
+:form status_server flags %
+
+:new format status_umode
+:form status_umode flags %
+
+:new format status_window
+:form status_window flags %
+
+:new format other_status
+:form other_status flags %
+
+alias a.status_display {
+	aecho to view a status bar use /status #
+}
+
+alias a.status_set {
+	fe ($formats[status][slaves]) xx {
+		if (xx == [other_status]) {
+			^assign format_other_status $$cparse\($formats[$xx][formats][$0]\)
+		} elsif (formats[$xx][formats][$0] == []) {
+			//^set -$xx
+		} else {
+			//^set $xx $(format_$xx)
+		}
+	}
+	^set status_format $getset(status_format1)
+}
+
+alias a.status_list {
+	aecho there are currently $formats[status][formats][count] status bar formats available
+	a.status_display
+}
+
+:new config xterm_title modify xterm title?
+:conf xterm_title flags bi
+:conf xterm_title value 0
+:conf xterm_title xref form:xterm_title
+:conf xterm_title help \
+this config allows you to turn on xterm title bar modification.  it is off \
+by default to prevent accidental screen corruption
+
+:new format xterm_title xterm title format
+:form xterm_title flags i
+:form xterm_title xref conf:xterm_title
+:form xterm_title arguments @version@ @server@ @nick@ @user@ @host@ @network@
+
+^timer -refnum status -repeat -1 -win -1 15 {
+	 ^eval set status_user2 $tdiff4(${time() - builtin_expando(F)})
+	 if (ac.config(xterm_title)) {
+		  ^xecho -r $chr(27)]0\;$fparse(xterm_title $builtin_expando(J) $builtin_expando(S) $servernick() $split(@ $builtin_expando(X)) $a.network.get())$chr(7)
+	 }
+}
+
+# vim: syntax=off ts=3 ai smartindent

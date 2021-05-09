@@ -1,0 +1,38 @@
+:new module telnet
+:mod telnet version 3
+:mod telnet desc telnet in a window!
+:mod telnet author erik@knowoneness.com erik Erik Hanson
+
+:new command telnet <host|ip> [port]
+:comm telnet desc establish a telnet connection
+:comm telnet help \
+creates a telnet connection to <host|ip> on [port] %n \
+if [port] is not specified, the default of 23 is used.
+
+alias telnet {
+    if (![$0]) {
+	usage telnet
+	return 0
+    }
+    if ([$1] != []) {
+	@telnetfd = [$connect($0 $1)]
+    } else {
+	@telnetfd = [$connect($0 23)]
+    }
+}
+
+
+^on ^dcc_raw "% % d *" {
+    xecho -w $1 $strip("$chr(13)" $3-)
+}
+
+^on ^dcc_raw "% % c" {
+    aecho telnet connection with $1 lost
+}
+
+^on ^dcc_raw "% % e %" {
+    ^window new query =$0 add $1 name $1 hide
+    aecho telnet connection to $1 established in query window \($querywin(=$0)\)
+} 
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

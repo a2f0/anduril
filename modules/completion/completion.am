@@ -1,0 +1,292 @@
+### $Id: completion.am,v 1.49 2003/03/26 09:35:43 wd Exp $
+
+:new module completion
+:mod completion version 129
+:mod completion desc CLI tab/nick/command/file/etc completion
+:mod completion author wd@anduril.org White_Dragon Chip Norkus
+:mod completion depend save usage
+:mod completion save_cmd a.completion.adv.savelists
+:mod completion unload_cmd a.completion.adv.unload
+
+^bind ^I parse_command a.completion.exec 0
+^bind ^R parse_command a.completion.remove_nick
+
+### other simple stuff we need
+mstub a.completion.exec
+mstub a.completion.remove_nick
+mstub a.completion.cursword
+mstub a.completion.complete
+mstub a.completion.display_matches
+
+alias a.completion.expire_nicks {
+    @:exptime = ac.config(comp_msg_expire) * 60
+    if (!exptime || builtin_expando(A)) {
+	return
+    }	
+
+    @:l = a.completion.mtab.list
+    @a.completion.mtab.list = []
+
+    fe ($l) xx {
+	if (a.completion.mtab.time[$ac.encode($xx)] < time() - exptime) {
+	    ^assign -a.completion.mtab.time[$ac.encode($xx)]
+	} else {
+	    @push(a.completion.mtab.list $xx)
+	}
+    }
+}
+
+mstub a.completion.add_item	
+mstub a.completion.del_item
+
+^eval on #-send_msg $ac.hash(completion) "*" {
+    @a.completion.add_item(a.completion.mtab.list $0)
+}
+
+^eval on #-msg $ac.hash(completion) "*" {
+    @a.completion.add_item(a.completion.mtab.list $0)
+}
+
+### add stuff to the nick list for DCC events
+^eval on #-dcc_connect $ac.hash(completion) "% CHAT *" {
+    @a.completion.add_item(a.completion.mtab.list =$0)
+}
+
+^eval on #-dcc_chat $ac.hash(completion) "% *" {
+    @a.completion.add_item(a.completion.mtab.list =$0)
+}
+
+^eval on #-send_dcc_chat $ac.hash(completion) "% *" {
+    @a.completion.add_item(a.completion.mtab.list =$0)
+}
+
+^eval on #-dcc_request $ac.hash(completion) "*" {
+    @a.completion.add_item(a.completion.mtab.list $0)
+}
+
+^eval on #-dcc_lost $ac.hash(completion) "% CHAT *" {
+    @a.completion.del_item(a.completion.mtab.list =$0)
+}
+
+### notices
+#^eval on #-send_notice $ac.hash(completion) "*" {
+#	@a.completion.add_item(a.completion.mtab.list $0)
+#}
+
+#^eval on #-notice $ac.hash(completion) "*" {
+#	if (index(. $0)==[-1]) {
+#		@a.completion.add_item(a.completion.mtab.list $0)
+#	}
+#}
+
+^eval on #-signoff $ac.hash(completion) "*" {
+    @a.completion.del_item(a.completion.mtab.list $0)
+}
+
+^eval on #-nickname $ac.hash(completion) "*" {a.completion.mtab.nhook $0 $1}
+^eval on #-channel_nick $ac.hash(completion) "*" {a.completion.mtab.nhook $1 $2}
+
+alias a.completion.mtab.nhook (from, to) {
+    ### be very sneaky here, if the nick is in the list, swap it around
+    ### for this one without changing place..
+    if (findw($from $a.completion.mtab.list) != -1) {
+	@a.completion.mtab.list = sar(/$from/$to/$a.completion.mtab.list)
+	@a.completion.mtab.time[$ac.encode($to)] = \
+	    a.completion.mtab.time[$ac.encode($from)]
+	^assign -a.completion.mtab.time[$ac.encode($from)]
+    }
+}
+
+alias a.completion.nick_comp_chars_chng_cmd {
+    fe ($1-) xx {
+	^on input -"%$xx *"
+    }
+
+    fe ($ac.config(nick_comp_chars)) xx {
+	^on ^input "%$xx *" {
+	    if (builtin_expando(Q) != []) {
+		xtype -l $*
+		parsekey send_line
+	    } else {
+		a.completion.exec 1 $*
+	    }
+	}
+    }
+}
+		
+### advanced completion here
+### note, if this is an alias, returns the real command
+alias a.completion.find {
+    if (a.completion.cmd[$0][alias]) {
+	return $a.completion.find($a.completion.cmd[$0][alias])
+    }
+    if (a.completion.cmd[$0][name]) {
+	return $0
+    }
+    return
+}
+
+mstub a.completion.adv.word
+mstub a.completion.adv.pct
+mstub a.completion.adv.unload
+
+alias a.completion.alias {
+    if (a.completion.find($0) == []) {
+	return
+    }
+
+    fe ($1-) xx {
+	@a.completion.cmd[$xx][alias] = [$0]
+	@a.completion.cmd_list = uniq($a.completion.cmd_list $xx)
+    }
+}
+
+alias a.completion.add {
+    if (a.completion.find($0) == []) {
+	@a.completion.cmd[$0][name] = [$0]
+	@a.completion.cmd_list = uniq($a.completion.cmd_list $0)
+    }
+
+    ### now keep traversing until we hit the beginning of the format list,
+    ### once we are there, no subcommands can be added below (but the user
+    ### could still give us a list...)
+
+    @:lev = [a.completion.cmd\[$0\]]
+    @:i = 0
+    while (word($i $1-)) {
+	if (left(1 $word($i $1-))==[%]) {
+	    @$(lev)[fmt] = restw($i $1-)
+	    break
+	}
+	### it's a new subcommand
+	@push($(lev)[slist] $word($i $1-))
+#	@$(lev)[slist] #= [$word($i $1-) ]
+	@$(lev)[sub][$ac.encode($word($i $1-))][name] = word($i $1-)
+	@:lev #= [[sub][$ac.encode($word($i $1-))]]
+	@:i++
+    }
+}
+
+
+:new command cmpctl <-c|-h> [-][item(s)]
+:comm cmpctl desc controls user-specifiable advanced completion settings
+:comm cmpctl aliases compctl cmpset
+:comm cmpctl flags i
+:comm cmpctl help \
+this command allows you to add or remove an item from either your channel \
+or host completion lists, or list the items.  specifying -c means channel \
+settings, and -h means host settings.  to add a channel, for example, \
+cmpctl -c #wd (to add #wd), or to remove a host, cmpctl -h \
+-noc.routing.org (to remove noc.routing.org)
+
+mstub cmpctl
+
+mstub a.completion.adv.savelists
+
+### this is where we set hooks for IRC events for advanced comp, and also
+### do anything else that needs to happen at load-time (like reading user lists)
+^eval on #-raw_irc $ac.hash(completion) "% PRIVMSG *" {
+    if (left(1 $2) != [#]) {
+	### check for DCC reqs
+	if ([$3] == [:DCC]) {
+	    @a.completion.add_item(comp_adv_dlist $before(! $0))
+	}
+	@a.completion.add_item(comp_adv_mlist $before(! $0))
+    }
+}
+^eval on #-raw_irc $ac.hash(completion) "% NOTICE *" {
+    if (left(1 $2) != [#]) {
+	@a.completion.add_item(comp_adv_mlist $before(! $0))
+    }
+}
+^eval on #-send_to_server $ac.hash(completion) "% % % PRIVMSG *" {
+    if (left(1 $4) != [#]) {
+	### check for DCC stuff
+	if ([$5] == [:DCC]) {
+	    @a.completion.add_item(comp_adv_dlist $before(! $0))
+	}
+	@a.completion.add_item(comp_adv_mlist $4)
+    }
+}
+^eval on #-send_to_server $ac.hash(completion) "% % % NOTICE *" {
+    if (left(1 $4) != [#]) {
+	@a.completion.add_item(comp_adv_mlist $4)
+    }
+}
+
+^eval on #-signoff $ac.hash(completion) "*" {
+    @a.completion.del_item(comp_adv_mlist $0)
+}
+if (fexist($apath/etc/completion.lists)!=[-1]) {
+    ^eval load $apath/etc/completion.lists
+}
+### load our builtins, load any files for other modules already loaded,
+### and add a hook to load files for modules not yet loaded.
+if (fexist($apath/share/completion/completion) != -1) {
+    ^eval load $apath/share/completion/completion
+}
+fe ($remw(completion $ac.module.list)) xx {
+    if (fexist($apath/share/completion/$xx) != -1) {
+	^eval load $apath/share/completion/$xx
+    }
+}
+^eval on #-hook $ac.hash(completion) "module_loaded *" {
+    if ([$1] == [completion]) {
+	return
+    }
+    if (fexist($apath/share/completion/$1) != -1) {
+	^eval load $apath/share/completion/$1
+    }
+}
+
+
+:new config comp_msg_array_size size of the msg nicks array used with completion
+:conf comp_msg_array_size flags n
+:conf comp_msg_array_size value 20
+
+:new config comp_msg_expire time (in minutes) to expire nicks from the msg array
+:conf comp_msg_expire flags n
+:conf comp_msg_expire value 0
+
+:new config comp_msg_ignore list of nicks never to add to the msg array
+:conf comp_msg_ignore flags s
+:conf comp_msg_ignore value ChanServ NickServ MemoServ OperServ OperServ2
+
+:new config nick_comp use nick completion (automatically?)
+:conf nick_comp flags bit
+:conf nick_comp value 1
+
+:new config ncomp_stay_ambiguous leave ambiguous entries as-is with auto nick-comp?
+:conf ncomp_stay_ambiguous flags bt
+:conf ncomp_stay_ambiguous value 1
+
+:new config nick_comp_chars nick completion activator characters (space separated list)
+:conf nick_comp_chars flags s
+:conf nick_comp_chars value :
+:conf nick_comp_chars change_cmd a.completion.nick_comp_chars_chng_cmd
+
+:new config comp_masks list of masks to use when doing completion, in descending order of precedence. use @ as the string token
+:conf comp_masks flags st
+:conf comp_masks value @* *@ *@*
+
+:new config comp_max_disp highest number of possible matches to display automatically
+:conf comp_max_disp flags n
+:conf comp_max_disp value 12
+
+:new config comp_cycle 0 = list all options, 1 = cycle through optiuns, 2 = both
+:conf comp_cycle flags n
+:conf comp_cycle value 1
+
+:new format nick_comp_string string appended to a completed nick
+:form nick_comp_string flags i
+:form nick_comp_string arguments @nick@
+:form nick_comp_string !format
+
+:new format comp_match string displayed for a possible completion match, 3 per line
+:form comp_match arguments @item@
+
+^timer -ref comp_m_exp -repeat -1 -win -1 60 {
+    a.completion.expire_nicks
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,75 @@
+The old README file is preserved below, these are my own comments:
+
+Someone sent me this nifty tool to interface with xmms.  It was in C++, I
+ported it back to C and made some changes to facilitate use in a script as
+opposed to use on the command line (although it is perfectly workable as a
+command line utility).  This software seems to be public domain, and it
+shall remain such.
+
+To build: run make, if you have everything you need, it will work.  This is
+intended to be used in the anduril script, but can be used elsehwere.  Enjoy
+
+-Chip Norkus (wd@anduril.org) August 2001
+
+--------------- OLD README FILE HERE -----------------------
+Epic(4)-tool to get the current song from XMMS
+----------------------------------------------------
+
+Needed: xmms-dev/xmms & glib-dev, g++
+
+INSTALL:
+1)	Just type 'make' (maybe you'll have to edit Makefile to fit your system)
+
+2)	This will compile the executable file "epic-xmms".
+
+3)	Then insert this in your ~/.ircrc or whatever script-file you use for epic4:
+
+		/load ~/path/to/epic-xmms.epic
+
+	And if you dont want to see the nasty process ended crap in Epic:
+		on ^exec_errors "*" {}
+		on ^exec_exit "*" {}
+		(NOTE: Remove this from you .ircrc: on ^exec "*" {} else you
+		can't see the output from /jump if there is more than one hit)
+
+4)	Now, fire up your epic and write /xmms, /next, /back, /stop, /play 
+	/pause, /mute, /shuffle, /repeat, /jump <song> :-) 
+	(requires xmms running, duuh)
+--
+
+
+NOTES:
+	It reads the ID3-tag from the mp3 you are listening too..
+	
+	This program was NOT maked too output a lot of crap to a channel, 
+	but just a small helpfull thing.
+	
+	Notice that the /jump function in 0.4 was case-sensitive, that is
+	now changed. and thats is NICE!
+
+	The /jump function now supports a nifty feature, imagine you have 
+	too mp3s called:
+		artist - number.mp3
+		artist - number remix.mp3
+	Then it can be difficoult to find a matching string for song 2, so
+	i implemented that you can write '/jump artist 2' to go directly to
+	the second song that matched the string 'artist'.
+--
+
+
+TODO:
+Not much! :)
+
+
+----------------------------------------------------
+If you have any changes or suggestions do not hesitate to write to me
+
+Tommy aka Yotus
+E-mail:		<yotus@linuxhq.dk>
+Homepage:	http://yotus.linuxhq.dk
+
+Credits:
+A litte C-code by <zap@riot.org>
+find_song() function by <igge_rask@yahoo.com>
+mute() function by <haudyr@fnuck.dk>
+Some code-adjustments by <borg@cs.auc.dk>

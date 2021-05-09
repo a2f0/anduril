@@ -1,0 +1,292 @@
+### $Id: dict.stubs,v 1.7 2003/08/26 01:09:14 wd Exp $
+ac.package dict
+
+alias define (line) {
+	if (a.dict.active) {
+		aerrecho sorry, a query is already in progress...
+		return
+	}
+	if (left(1 $line) == [-] && pass(1arv $left(2 $line)) != []) {
+		@:flag = after(- $word(0 $line))
+		@:arg = restw(1 $line)
+	} else {
+		@:arg = line
+		@:flag = ac.config(dict_qtype)
+	}
+
+	@:db = []
+	@:mtype = [.]
+	@:extra = []
+	while (left(1 $arg) == [-] && pass(dm $left(2 $arg)) != []) {
+		if (word(0 $arg) == [-d]) {
+			@:db = word(1 $arg)
+			@:extra #= [in databse $db ]
+		} elsif(word 0 $arg) == [-m]) {
+			@:mtype = word(1 $arg)
+			@:extra #= [with matchtype $mtype ]
+		}
+		@:arg = restw(2 $arg)
+	}
+	if (extra == []) {
+		@:extra = [in all databases]
+	}
+
+	switch ($flag) {
+		(1) (one) {
+			if (arg == []) {
+				@usage(define)
+				return
+			}
+			if (db == []) {
+				@:db = [!]
+			}
+			@:flag = [d]
+			aecho looking up first definition of $arg $extra ...
+		}
+		(a) (all) {
+			if (arg == []) {
+				@usage(define)
+				return
+			}
+			if (db == []) {
+				@:db = [*]
+			}
+			@:flag = [d]
+			aecho looking up all definitions of $arg $extra ...
+		}
+		(v) {
+			aecho retrieving version and databases from $ac.config(dict_server)
+		}
+		(r) {
+			aecho performing raw query $args on $ac.config(dict_server)
+		}
+	}
+	
+	@a.dict.qtype = flag
+	@a.dict.query = arg
+	@a.dict.db = db
+	@a.dict.mtype = mtype
+	@a.dict.win = winnum()
+	a.dict.start
+}
+
+alias a.dict.start {
+	@a.dict.active = 1
+	@:serv = ac.config(dict_server)
+	if (serv =~ [*:*]) {
+		@:port = after(: $serv)
+		@:serv = before(: $serv)
+	} else {
+		@:port = 2628
+	}
+
+	@a.dict.serv = serv
+	^eval on ^dcc_raw "% $serv e %" a.dict.open $$$$*
+	if (connect($serv $port) == []) {
+		aerrecho error performing dictionary query on $serv:$port
+		^eval on dcc_raw -"% $serv e %"
+		@a.dict.active = 0
+		return
+	}
+	### now set up our raw hook, then send our query
+	^eval on ^dcc_raw "% $serv d *" a.dict.read $$$$*
+	^eval on ^dcc_raw "% $serv c" a.dict.finish $$$$*
+}
+	
+alias a.dict.open (fd, serv, type, data) {
+	@a.dict.expect = [n]
+	//^dcc raw $fd $serv CLIENT anduril dictionary module
+	switch ($a.dict.qtype) {
+		(v) {
+			//^dcc raw $fd $serv SHOW DATABASES
+			//^dcc raw $fd $serv SHOW STRATEGIES
+		}
+		(r) {
+			//^dcc raw $fd $serv $a.dict.query
+			//^dcc raw $fd $serv QUIT
+		}
+		(d) {
+			//^dcc raw $fd $serv DEFINE $a.dict.db \"$a.dict.query\"
+		}
+	}
+	^eval on ^dcc_raw -"% $serv e %"
+}
+
+alias a.dict.read (fd, serv, type, data) {
+	@:data = strip("$chr(13)" $data)
+	### expect type can be one of n: number, l: list of definitions (from
+	### a match or show) or d: definition(s) (from a define)
+	if (a.dict.qtype == [r]) {
+		@a.dict.data #= [$data$chr(10)]
+	}
+	switch ($a.dict.expect) {
+		(n) {
+			@:rpl = word(0 $data)
+			@:data = restw(1 $data)
+			switch ($rpl) {
+				(110) {
+					@a.dict.data.db.count = 0
+					@a.dict.expect = [l]
+					@a.dict.active = 2
+				}
+				(111) {
+					@a.dict.data.strat.count = 0
+					@a.dict.expect = [l]
+					@a.dict.active = 3
+				}
+				(150) {
+					@a.dict.data.def.count = 0
+					@a.dict.active = 2
+				}
+				(151) {
+					@a.dict.expect = [d]
+					@a.dict.data.def.info[$a.dict.data.def.count] = data
+				}
+				(152) {
+					@a.dict.expect = [l]
+				}
+				(220) {
+					if (a.dict.qtype == [v]) {
+						@a.dict.data.version = before(< $data)
+					}
+				}
+				(221) {}
+				(250) {
+					if (a.dict.qtype == [d] && a.dict.active == 2) {
+						//^dcc raw $fd $serv QUIT
+					}
+				}
+				(552) {
+					### okay, so we try and match and give the user a list of
+					### other possible words.
+					if (a.dict.active == 2) {
+						//^dcc raw $fd $serv QUIT
+						@a.dict.data.dblist = -1
+					}
+					@a.dict.active = 2
+					//^dcc raw $fd $serv MATCH $a.dict.db $a.dict.mtype \"$a.dict.query\"
+				}
+				(*) {
+					### no other replies are handled here, and they should be
+					### treated as errors.
+					//^dcc raw $fd $serv QUIT
+				}
+			}
+		}
+		(l) {
+			switch ($a.dict.qtype) {
+				(d) {
+					if (data != [.]) {
+						if (findw($word(0 $data) $a.dict.data.dblist) == -1) {
+							@a.dict.data.dblist #= [$word(0 $data) ]
+						}
+						@a.dict.data.list[$word(0 $data)] #= [$after(\\" $chop($restw(1 $data))), ]
+					} else {
+						@a.dict.expect = [n]
+					}
+				}
+				(v) {
+					switch ($a.dict.active) {
+						(2) {
+							if (data != [.]) {
+								@a.dict.data.db[$a.dict.data.db.count] = data
+								@a.dict.data.db.count++
+							} else {
+								@a.dict.expect = [n]
+							}
+						}
+						(3) {
+							if (data != [.]) {
+								@a.dict.data.strat[$a.dict.data.strat.count] = data
+								@a.dict.data.strat.count++
+							} else {
+								@a.dict.expect = [n]
+								//^dcc raw $fd $serv QUIT
+							}
+						}
+					}
+				}
+			}
+		}
+		(d) {
+			if (data != [.]) {
+				### ignore lines which are simply the word at the beginning of
+				### the line (cut down a little on extra crap)
+				if (data != a.dict.query) {
+					if (index(\} $data) < index(\{ $data)) {
+						@a.dict.data.def[$a.dict.data.def.count] #= []
+					}
+					@a.dict.data.def[$a.dict.data.def.count] #= msar(gÿ\{ÿÿ\}ÿÿ$data$chr(10))
+				}
+			} else {
+				@a.dict.data.def.count++
+				@a.dict.expect = [n]
+			}
+		}
+	}
+}
+
+alias a.dict.finish (fd, serv, type, data) {
+	@a.dict.active = 0
+	switch ($a.dict.qtype) {
+		(d) {
+			a.box.echocmd xecho -win $a.dict.win
+			a.box.start definition of $a.dict.query
+			if (a.dict.data.dblist != []) {
+				### a mispelled word of some sort
+				if (a.dict.data.dblist == -1) {
+					a.box.echo no definitions found
+				} else {
+					a.box.echo no definitions found, suggested words:
+					fe ($a.dict.data.dblist) xx {
+						a.box.echo $xx: $chop(2 $a.dict.data.list[$xx])
+					}
+				}
+			} else {
+				if (a.dict.data.def.count == [] || a.dict.data.def.count == 0) {
+					a.box.echo no definitions found!  most likely an error has occured
+				}
+				a.box.echo $a.dict.data.def.count definitions found
+				for (@:i = 0, i < a.dict.data.def.count, @:i++) {
+					@:db = word(0 $after(2 \\" $a.dict.data.def.info[$i]))
+					@:dbn = chop(1 $after(3 \\" $a.dict.data.def.info[$i]))
+					a.box.echo [#${i + 1}]: $db\($dbn\), $a.dict.query:
+					a.box.echo $a.dict.data.def[$i]
+				}
+			}
+		}
+		(r) {
+			a.box.echocmd xecho -win $a.dict.win
+			a.box.start raw query $a.dict.query
+			a.box.echo $a.dict.data
+		}
+		(v) {
+			a.box.echocmd xecho -win $a.dict.win
+			a.box.start info on $ac.config(dict_server)
+			a.box.echo server: $a.dict.data.version
+			a.box.echo databases available: $a.dict.data.db.count
+			for (@:i = 0, i < a.dict.data.db.count, @:i++) {
+				a.box.echo $word(0 $a.dict.data.db[$i]): $chop(1 $after(\\" $a.dict.data.db[$i]))
+			}
+			a.box.echo strategies available: $a.dict.data.strat.count
+			for (@:i = 0, i < a.dict.data.strat.count, @:i++) {
+				a.box.echo $word(0 $a.dict.data.strat[$i]): $chop(1 $after(\\" $a.dict.data.strat[$i]))
+			}
+		}
+	}
+	a.box.end
+	fe (db strat def.info def list) xx {
+		fe ($aliasctl(assign match a.dict.data.${xx}.)) yy {
+			//^assign -$yy
+		}
+	}
+	fe ($aliasctl(assign match a.dict.data.)) xx {
+		//^assign -$xx
+	}
+	^assign -a.dict.data
+	^eval on ^dcc_raw -"% $serv d *"
+	^eval on ^dcc_raw -"% $serv c"
+}
+
+@a.dict.active = 0
+# vim: syntax=off ts=3 ai smartindent

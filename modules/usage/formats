@@ -1,0 +1,5 @@
+# formats for type usage
+ac.format.add                usage usage$(dcol1): $(hcol1)/$(col1)@command@%n @syntax@
+ac.format.add                usage usage$(dcol1)[$(col1)@command@$(dcol1)]%n: @syntax@
+# ---
+

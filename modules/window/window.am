@@ -1,0 +1,279 @@
+### $Id: window.am,v 1.25 2003/01/30 18:11:30 wd Exp $
+
+:new module window
+:mod window version 25
+:mod window desc adds various window commands and aliases
+:mod window author wd@anduril.org White_Dragon Chip Norkus
+:mod window depend status
+
+### keybindings galore
+### window swap stuff for Linux terms and xterms/rxvts/eterms/aterms/assterms/whatever
+^bind ^[1 parse_command window swap 1
+^bind ^[2 parse_command window swap 2
+^bind ^[3 parse_command window swap 3
+^bind ^[4 parse_command window swap 4
+^bind ^[5 parse_command window swap 5
+^bind ^[6 parse_command window swap 6
+^bind ^[7 parse_command window swap 7
+^bind ^[8 parse_command window swap 8
+^bind ^[9 parse_command window swap 9
+^bind ^[0 parse_command window swap 10
+### command to bind some popular keys
+### (currently just fkeys) {
+:new command setkey <key> [-b] [command]
+:comm setkey desc binds a key to a command
+:comm setkey flags i
+:comm setkey help \
+this command binds the specified key, if it is known, to perform the \
+specified command, or displays what the key does, if no command is \
+specified.  Currently valid keys are any that are in the termcap/terminfo \
+entry for your current $TERM, as well as control keys (i.e. ^x) If the -b \
+flag is placed before the command, command is treated as a direct argument \
+to /BIND, not as an argument to parse_command
+
+alias setkey {
+    if ([$0] == []) {
+	@usage(setkey)
+	return
+    }
+
+    if (match(^? $0)) {
+	@:bind = [$0]
+    } elsif (getcap(TERM key_$0 0 1)) {
+	@:bind = [-symbolic key_$0]
+    } else {
+	aerrecho no definition for the key $0 exists in your terminal information, sorry!
+	return
+    }
+
+    if ([$1] != []) {
+	if ([$1] == [-b]) {
+	    if ([$2] == []) {
+		@usage(setkey)
+		return
+	    }
+	    ^bind $bind $2-
+	} else {
+	    ^bind $bind parse_command $1-
+	}
+    } else {
+	bind $bind
+    }
+}
+
+alias ws {
+    if ([$0]) {
+	^window swap $0
+    } else {
+	^window swap last
+    }
+}
+
+:new command wn
+:comm wn desc moves to the next window
+:comm wn xref comm:wp
+:comm wn help \
+this command swaps to the next hidden window, or if there are no more hidden \
+windows, swaps to the first hidden window.
+alias wn {
+    parsekey swap_next_window
+}
+:new command wp
+:comm wp desc moves to the previous window
+:comm wp xref comm:wn
+:comm wp help \
+this command swaps to the previous hidden window, or if there are no more \
+hidden windows, swaps to the last hidden window in the client.
+alias wp {
+    parsekey swap_previous_window
+}
+
+:new command wnh [arguments to window command]
+:comm wnh desc creates a new hidden window
+:comm wnh aliases wc
+:comm wnh help \
+this creates a new hidden window (see the help for the /wn command for \
+more info)
+
+alias wnh {
+    ^window new $* hide
+}
+
+:new command wnc <#channel> [arguments to window command]
+:comm wnc desc creates a new hidden window and joins+binds a channel to it
+:comm wnc aliases wj wnj
+:comm wnc help \
+this command behaves exactly like the /wnh command, but it also binds and \
+joins the specified channel to/in the new window, and swaps to the new \
+window as well
+
+alias wnc (channel, args) {
+    if (channel == []) {
+	@usage(wnc)
+	return
+    }
+
+    @:channel = a.chan_fixname($channel)
+    ^window new channel \"$channel $args\" bind $channel hide swap last
+}
+
+:new command wns <server> [arguments to SERVER command]
+:comm wns desc creates a new hidden window and connects the specified server to it
+:comm wns help \
+this command creates a new hidden window and connects to a server in it, \
+it also swaps to the new window.
+
+alias wns {
+    if (![$0]) {
+	@usage(wns)
+	return
+    }
+
+    ^window new server $* hide last
+}
+
+:new command wk [#|name]
+:comm wk desc kills the current or specified window
+:comm wk help \
+this command kills the specified window, or the current if none is \
+specified.
+
+alias wk {
+    if ([$0]) {
+	if (winnum($0) == -1) {
+	    aerrecho no such window $0
+	    return
+	}
+	@:win = winnum($0)
+    } else {
+	@:win = winnum()
+    }
+    if (win == winnum()) {
+	window killswap next
+    } else {
+	window $win kill
+    }
+}
+
+:new command wpk [#channel] [message]
+:comm wpk desc parts the specified channel and kills its window
+:comm wpk aliases wlk
+:comm wpk help \
+this command parts the current or specified channel and kills its window
+
+alias wpk (channel, args) {
+    if (channel == []) {
+	@:channel = builtin_expando(C)
+	if (channel == []) {
+	    aerrecho no current channel
+	    return
+	}
+    }
+    if (channel($channel) == []) {
+	aerrecho you are not on $channel
+	return
+    }
+    @:win = winnum($winchan($channel))
+    part $channel $args
+    wait
+    
+    if (win > -1) {
+	wk $win
+    }
+}
+
+:new command wq [nick]
+:comm wq desc creates or destroys a query window
+:comm wq help \
+when specified with a nickname, this command either creates a new (hidden) \
+window and queries the specified user, or destroys any *dedicated* query \
+window for that user.  If used with no arguments, if the current window is \
+a dedicated query window, it will be destroyed.
+
+alias wq (nick) {
+     if (nick != []) {
+	  if (querywin($nick) == -1) {
+		//^window new query $nick add $nick hide
+		aecho query window \($querywin($nick)\) created for $nick
+		return
+	  } else {
+		@:win = querywin($nick)
+	  }
+     } else {
+	  @:win = winnum()
+     }
+ 
+     if (winbound($win) != [] || \
+	 ((nick != [] && findw($nick $winnicklist($win)) == -1) || \
+	 (winnicklist($win) == []))) {
+	  aerrecho window $win does not seem to be a dedicated query window.
+	  aerrecho if you really want to kill it, use /wk $win
+	  return
+     }
+     wk $win
+}
+
+alias a.window.makekey (num) {
+    fec ($num) xx {
+	@:ret #= [^\[$xx]
+    }
+    return $ret
+}
+
+### turn double on/off as necessary
+^on ^window_create "*" {
+    if (ac.config(status_double)) {
+	window $0 double on
+    }
+    @:num = winnum($0)
+    if (num < 0) {
+	@:num = [$0]
+    }
+    //^alias $num window refnum_or_swap $num
+    //^bind $a.window.makekey($num) parse_command window refnum_or_swap $num
+}
+
+^on ^window_kill "*" {
+    //^alias -$0
+    if ([$0] > 10) {
+	//^bind $a.window.makekey($0) NOTHING
+    }
+}
+
+fe ($winrefs()) xx {
+    //^alias $xx window refnum_or_swap $xx
+    //^bind $a.window.makekey($xx) parse_command window refnum_or_swap $xx
+}
+
+^on ^window ^"% *Window [%] doesnt exist any more.  Punting."
+
+alias a.window.key_chng_cmd {
+    if ([$1] != []) {
+	### we can't really change it back to what it would be otherwise, so we
+	### do this instead.
+	^bind ^$1 self_insert
+    }
+    @:c = ac.config(window_key)
+    ^bind ^${c}N next_window
+    ^bind ^${c}n swap_next_window
+    ^bind ^${c}P previous_window
+    ^bind ^${c}p swap_previous_window
+    ^bind ^${c}s swap_last_window
+    ^bind ^${c}1 parse_command window swap 1
+    ^bind ^${c}2 parse_command window swap 2
+    ^bind ^${c}3 parse_command window swap 3
+    ^bind ^${c}4 parse_command window swap 4
+    ^bind ^${c}5 parse_command window swap 5
+    ^bind ^${c}6 parse_command window swap 6
+    ^bind ^${c}7 parse_command window swap 7
+    ^bind ^${c}8 parse_command window swap 8
+    ^bind ^${c}9 parse_command window swap 9
+    ^bind ^${c}0 parse_command window swap 0
+}
+
+:new config window_key this is the control-key (letter only here) that is bound to most window functions
+:conf window_key value W
+:conf window_key flags wt
+:conf window_key change_cmd a.window.key_chng_cmd
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

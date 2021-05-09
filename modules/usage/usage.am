@@ -1,0 +1,26 @@
+### $Id: usage.am,v 1.12 2001/06/25 22:57:04 wd Exp $
+
+:new module usage
+:mod usage version 17
+:mod usage desc displays command usage
+:mod usage author wd@anduril.org White_Dragon Chip Norkus
+
+:new format usage displayed by /usage command
+:form usage arguments @command@ @syntax@
+
+alias usage {
+	if (![$0]) {
+		usage usage
+		return
+	}{
+		if (ac.command.find($0) != []) {
+			aerrecho $fparse(usage $0 $commands[$0][syntax])
+			return
+		}{
+			aerrecho no syntax info for command $0
+			return
+		}
+	}
+}
+
+# vim: syntax=off ts=3 ai smartindent

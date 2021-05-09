@@ -1,0 +1,7 @@
+@a.completion.add(ctcp %[,]N,c %'version,clientinfo,userinfo,finger')
+
+@a.completion.add(version %[,]N,c,s)
+@a.completion.alias(version ver)
+
+@a.completion.add(ping %[,]N,c)
+

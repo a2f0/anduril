@@ -1,0 +1,9 @@
+alias a.network.is_dalnet {
+	if (match(*.dal.net $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps dalnet hlmostwx d 30 6 d

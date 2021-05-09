@@ -1,0 +1,69 @@
+### $Id: msg.stubs,v 1.15 2004/03/03 10:10:32 wd Exp $
+ac.package msg
+
+alias msg (target, line) {
+    if (line == []) {
+	@usage(msg)
+    } else {
+	//msg $target $line
+    }
+}
+
+alias notice (target, line) {
+    if (line == []) {
+	@usage(notice)
+    } else {
+	//notice $target $line
+    }
+}
+
+alias mesgview (tog) {
+    switch ($tog) {
+	(on) {
+	    if (winnum(mesgview) != -1) {
+		aerrecho mesgview is already on!
+		return
+	    }
+	    ^window new num $ac.hash(msg) name mesgview size $ac.config(mesgview_size)
+	    ^window mesgview double off scroll on fixed on skip on
+	    ^window mesgview level msgs,actions
+	    ^window mesgview status_special mesgview
+	    ^window mesgview status_format "$format_other_status"
+	    if (ac.config(mesgview_hide)) {
+		^window mesgview fixed off hide
+	    } else {
+		^window back
+	    }
+	}
+	(off) {
+	    if (winnum(mesgview) == -1) {
+		aerrecho mesgview is already off!
+		return
+	    }
+	    ^window refnum mesgview kill
+	}
+    }
+    aecho mesgview is ${winnum(mesgview) != -1 ? [on] : [off]}
+}
+
+alias a.msg.shorten (address) {
+    @:user = before(@ $address)
+    @:host = after(@ $address)
+
+    if (count(. $host) < 2 || isnumber($after(-1 . $host)) == 1) {
+	return $user $host
+    }
+
+    switch ($ac.config(msg_shorten_host)) {
+	(1) { 
+	    @:host = [...$after(-2 . $host)]
+	}
+	(2) {
+	    @:host = after(-2 .  $host)
+	}
+    }
+
+    return $user $host
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

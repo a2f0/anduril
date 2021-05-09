@@ -1,0 +1,199 @@
+# $Id: cmd.services,v 1.1 2003/05/25 01:26:54 wd Exp $
+
+:new format services_send displayed when a services command is issued
+:form services_send arguments @service@ @msg@
+:form services_send xref comm:services form:services_recv
+ac.format.add services_send $(dcol2)\($(hcol2)@service@$(dcol2)) $(hcol1)->$(ncol) @msg@
+
+:new format services_recv displayed when a message from services is received
+:form services_recv arguments @service@ @msg@
+:form services_recv xref comm:services form:services_send
+ac.format.add services_recv $(dcol2)\($(hcol2)@service@$(dcol2))$(ncol) @msg@
+
+:new command services <stuff>
+:comm services desc semds text to services
+:comm services xref comm:chanserv comm:nickserv comm:memoserv comm:operserv comm:operserv2 \
+comm:statserv form:services_send form:services_recv
+:comm services help \
+this is just the /quote services command, with a wrapper
+
+alias services {
+    if ([$0] == []) {
+	@usage(services)
+	return
+    }
+    ^quote services $*
+    echo $fparse(services_send Services $*)
+}
+
+:new command identify <stuff>
+:comm identify desc identify to either nickserv or chanserv
+:comm identify aliases id
+:comm identify help \
+this is just the /quote identify command, with a wrapper
+
+alias identify {
+    if ([$0] == []) {
+	@usage(identify)
+	return
+    }
+
+    ^quote identify $*
+    if ([$1] == []) {
+	echo $fparse(services_send ID $repeat($strlen($0) *))
+    } else {
+	echo $fparse(services_send ID $0 $repeat($strlen($1) *))
+    }
+}
+
+:new command chanserv <stuff>
+:comm chanserv desc sends text to ChanServ
+:comm chanserv aliases cs
+:comm chanserv help \
+this is just the /quote chanserv command, with a wrapper
+
+alias chanserv {
+    if ([$0] == []) {
+	@usage(chanserv)
+	return
+    }
+
+    ^quote chanserv $*
+    if ([$0]==[identify]||[$0]==[register]) {
+	echo $fparse(services_send CS $0 $1 $repeat($strlen($2) *) $3-)
+    } else {
+	echo $fparse(services_send CS $*)
+    }
+}
+
+:new command nickserv <stuff>
+:comm nickserv desc sends text to NickServ
+:comm nickserv aliases ns
+:comm nickserv help \
+this is just the /quote nickserv command, with a wrapper
+
+alias nickserv {
+    if ([$0] == []) {
+	@usage(nickserv)
+	return
+    }
+    ^quote nickserv $*
+    if ([$0]==[identify]||[$0]==[ghost]||[$0]==[release]||[$0]==[recover]) {
+	if ([$2]) {
+	    echo $fparse(services_send NS $0 $1 $repeat($strlen($2) *) $3-)
+	} else {
+	    if ([$0]==[identify]) {
+		echo $fparse(services_send NS $0 $repeat($strlen($1) *) $2-)
+	    } else {
+		echo $fparse(services_send NS $*)
+	    }
+	}
+    } else {
+	echo $fparse(services_send NS $*)
+    }
+}
+
+:new command memoserv <stuff>
+:comm memoserv desc sends text to MemoServ
+:comm memoserv aliases ms
+:comm memoserv help \
+this is just the /quote memoserv command, with a wrapper
+
+alias memoserv {
+    if ([$0] == []) {
+	@usage(memoserv)
+	return
+    }
+    ^quote memoserv $*
+    echo $fparse(services_send MS $*)
+}
+
+:new command operserv <stuff>
+:comm operserv desc sends text to OperServ
+:comm operserv aliases os
+:comm operserv help \
+this is just the /quote operserv command, with a wrapper
+
+alias operserv {
+    if ([$0] == []) {
+	@usage(operserv)
+	return
+    }
+    ^quote operserv $*
+    if ([$0] == [identify]) {
+	if ([$2]) {
+	    echo $fparse(services_send OS $0 $1 $repeat($strlen($1) *) $3-)
+	} else {
+	    echo $fparse(services_send OS $0 $repeat($strlen($1) *) $2-)
+	}
+    } else {
+	echo $fparse(services_send OS $*)
+    }
+}
+
+:new command operserv2 <stuff>
+:comm operserv2 desc sends text to OperServ2
+:comm operserv2 aliases os2
+:comm operserv2 help \
+this is just the /msg operserv2 (/quote doesnt exist for os2) command, with a wrapper
+
+alias operserv2 {
+    if ([$0] == []) {
+	@usage(operserv2)
+	return
+    }
+    ^msg operserv2 $*
+    if ([$0] == [identify]) {
+	if ([$2]) {
+	    echo $fparse(services_send OS2 $0 $1 $repeat($strlen($1) *) $3-)
+	} else {
+	    echo $fparse(services_send OS2 $0 $repeat($strlen($1) *) $2-)
+	}
+    } else {
+	echo $fparse(services_send OS2 $*)
+    }
+}
+
+:new command statserv <stuff>
+:comm statserv desc sends text to StatServ
+:comm statserv aliases ss
+:comm statserv help \
+this is just the /quote statserv command, with a wrapper
+
+alias statserv {
+    if ([$0] == []) {
+	@usage(statserv)
+	return
+    }
+    ^quote statserv $*
+    if ([$0] == [login]) {
+	echo $fparse(services_send SS login $1 $repeat($strlen($2) *))
+    } else {
+	echo $fparse(services_send SS $*)
+    }
+}
+
+:new command rootserv <stuff>
+:comm rootserv desc sends text to RootServ
+:comm rootserv aliases rs
+:comm rootserv help \
+this is just the /quote rootserv command, with a wrapper
+
+alias rootserv {
+    if ([$0] == []) {
+	@usage(rootserv)
+	return
+    }
+    ^quote rootserv $*
+    echo $fparse(services_send RS $*)
+}
+
+### some quick on notice commands to trap *serv stuff.
+^on ^notice "nickserv *" echo $fparse(services_recv NS $1-)
+^on ^notice "chanserv *" echo $fparse(services_recv CS $1-)
+^on ^notice "memoserv *" echo $fparse(services_recv MS $1-)
+^on ^notice "operserv *" echo $fparse(services_recv OS $1-)
+^on ^notice "statserv *" echo $fparse(services_recv SS $1-)
+^on ^notice "rootserv *" echo $fparse(services_recv RS $1-)
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

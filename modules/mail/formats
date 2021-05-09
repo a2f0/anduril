@@ -1,0 +1,5 @@
+# formats for type quit_msg
+ac.format.add          mail_notify new mail has arrived in @folder@ on $strftime(@time@ %%H:%%M:%%S)
+ac.format.add          mail_notify $(hcol1)mail $(col1)has arrived $(dcol1)[$(ncol)@folder@$(dcol1)] \($(ncol)$strftime(@time@ %%H:%%M:%%S)$(dcol1)\)
+# ---
+

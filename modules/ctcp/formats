@@ -1,0 +1,17 @@
+# formats for type ctcp_send
+ac.format.add            ctcp_send CTCP @request@ ${[@args@] ? [\(@args@) ] : []}sent to @to@
+ac.format.add            ctcp_send ctcp$(dcol1)\($(hcol1)send$(dcol1)) $(hcol1)@to@$(dcol1): $(col1)@request@ ${[@args@] ? [$(dcol1)\(%n@args@$(dcol1))%n] : []}
+ac.format.add            ctcp_send $(col1)ctcp$(dcol1)\($(hcol1)@request@$(dcol1))$(ncol) @to@ ${[@args@] ? [$(dcol1)\(%n@args@$(dcol1))%n] : []}
+# ---
+
+# formats for type ctcp_recv
+ac.format.add            ctcp_recv ${[@type@] == [request] ? [CTCP @request@ from @from@ ${[@to@] != N ? [to @to@] : []}] : [CTCP @request@ reply from @from@${[@to@] != N ? [ \(to @to@)] : []}${[@args@] ? [\: @args@] : []}]}
+ac.format.add            ctcp_recv ctcp$(dcol1)\($(hcol1)@type@$(dcol1)) $(hcol1)@from@${[@to@]!=N ?  [$(dcol1)\($(col1)@to@$(dcol1))%n] : []}: $(col1)@request@ ${[@args@] ? [$(dcol1)\(%n@args@$(dcol1))%n] : []}
+ac.format.add            ctcp_recv $(col1)@type@$(dcol1)\($(hcol1)@request@$(dcol1))$(ncol) from $(col1)@from@${[@to@] != N ? [ $(dcol1)\($(ncol)to $(col1)@to@$(dcol1))] : []}${[@args@] ? [$(ncol)\: $(dcol1)\($(ncol)@args@$(dcol1))] : []}
+# ---
+
+# formats for type ctcp_version_reply
+ac.format.add   ctcp_version_reply anduril @script@ \(ircII @epic@\) -- @tag@
+ac.format.add   ctcp_version_reply anduril @script@ \(ircII @epic@\)
+ac.format.add   ctcp_version_reply anduril[@script@]/@epic@/@os@ -- @tag@
+ac.format.add   ctcp_version_reply anduril[@script@]/@epic@/@os@

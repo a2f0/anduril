@@ -1,0 +1,3 @@
+@a.completion.add(define %*)
+@a.completion.alias(define dict)
+

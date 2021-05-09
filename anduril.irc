@@ -1,0 +1,192 @@
+#############################################################################
+### anduril.irc
+### v1.0
+### by White_Dragon, WhiteDrgn, wd@anduril.org, whatever.
+###
+### If you want to copy portions of this script, just ask the author (which
+### won't necessarily be me if it's a module, just do an /minfo to see who
+### it is ;)
+###
+### $Id: anduril.irc,v 1.90 2003/03/13 05:30:03 wd Exp $
+###
+
+#############################################################################
+### can we load this script?
+
+if (!epic() || V < 20020819) {
+    echo *** You need ircII-EPIC4-1.1.7 or higher for this script
+    sleep 10
+    exit I DON'T KNOW HOW TO READ README FILES, POINT AND LAUGH AT ME WHEN I GET BACK!
+} elsif (bitchx()) {
+    echo *** You cannot use this script with BitchX, get EPIC
+    sleep 10
+    exit I DON'T KNOW HOW TO READ README FILES, POINT AND LAUGH AT ME WHEN I GET BACK!
+}
+
+### dump anything there before, and set our package name
+^timer -del all
+^dump
+package anduril
+
+#############################################################################
+### the script's version number is declared here, so I can remember to change
+### it mostly.  also the core version number is here for updateability
+@aversion = [1.2b5]
+
+#############################################################################
+### benchmark stuff
+@a.loadstart = utime()
+
+#############################################################################
+### global variables
+###
+@col = col1 = col2 = cparse(%N%n)
+@hcol = hcol1 = hcol2 = cparse(%N%W)
+@dcol = dcol1 = dcol2 = cparse(%N%K)
+@ncol = cparse(%N%n)
+
+### our path variable, now determined by hand (yippy)
+@apath = before(-1 / $realpath($word(1 $loadinfo())))
+
+#############################################################################
+### stubs for various functions..
+###
+eval stub alias ac.module.find,ac.module.load $apath/core/module
+eval stub alias ac.module.pkgfix,ac.module.unload $apath/core/module
+eval stub alias ac.command.find,ac.command.find_alias $apath/core/command
+eval stub alias ac.format.add,ac.format.find,fset,fparse $apath/core/format
+eval stub alias ac.config.find,ac.config.set,ac.config $apath/core/config
+eval stub alias aecho,aerrecho,ac.encode,ac.hash,ac.size_fmt $apath/core/util
+eval stub alias tdiff3,tdiff4,ac.len,ac.quote_assign $apath/core/util
+eval stub alias ac.question,floor,ceil $apath/core/util
+eval stub alias ac.module.save,ac.save,ac.module.save_list $apath/core/save
+
+### ac.package [package]
+### sets a module's package name (no name == main script)
+alias ac.package (package) {
+    if (package == []) {
+	package anduril
+    } else {
+	package anduril\($package\)
+    }
+}
+
+#############################################################################
+### loading section...
+### 
+### this is where we do the final loading for the script, once everything is
+### setup.
+
+^set banner ***
+if (fexist($apath/etc/save) != -1) {
+    ^eval load $apath/etc/save
+}
+
+#############################################################################
+### do script settings
+### these are considered holy, they should never be changed.  an on has been
+### added to circumvent the user from doing this.
+
+alias ac.warn_set (set, value) {
+    if (value != getset($set)) {
+	aerrecho please leave the $set setting alone, the script depends
+	aerrecho on its initial value!
+    }
+}
+
+^set color on
+^set display_ansi on
+^set eight_bit_characters on
+^set floating_point_math on
+^set mode_stripper on
+^on ^set "color ?*" a.core.warn_set $*
+^on ^set "display_ansi ?*" a.core.warn_set $*
+^on ^set "eight_bit_characters ?*" a.core.warn_set $*
+^on ^set "floating_point_math ?*" a.core.warn_set $*
+^on ^set "mode_stripper ?*" a.core.warn_set $*
+
+^window 1 level none
+^window 1 name 1
+#############################################################################
+### finally, load all the modules and stuff.
+
+@a.loadfinish = utime()
+@a.modloadstart = utime()
+
+if (fexist($apath/etc/modules.list) == -1) {
+    if (fexist($apath/etc/modules.list.default) != -1) {
+	@rename($apath/etc/modules.list.default $apath/etc/modules.list)
+    } else {
+	aerrecho no module list.  this won't be a very functional script.
+    }
+}
+@ac.fd = open($apath/etc/modules.list R)
+if (ac.fd < 0) {
+    aerrecho Can't open module list in $apath/etc/modules.list, giving up!
+    exit
+}
+@ac.line = read($ac.fd)
+while (!eof($ac.fd)) {
+    if (ac.line != []) {
+	ac.module.load $ac.line autoloaded
+    }
+    @ac.line = read($ac.fd)
+}
+@close($ac.fd)
+^assign -ac.fd
+^assign -ac.line
+ac.module.pkgfix
+
+^eval set status_user1 $aversion
+@anduril = aversion
+
+### warn users using versions older than what they should be using (imo)
+if (info(i) < 349) {
+    echo *** ------------------ WARNING - WARNING -----------------------
+    echo *** Your version is lower than EPIC4-1.1.7 (349), I strongly recommend
+    echo *** you run this or a higher version of EPIC, as lower versions may
+    echo *** function poorly (or not work at all!).  You have passed the
+    echo *** 'minimum' requirement, but again I recommend you continue to
+    echo *** stay current with the releases of the client.  This has been
+    echo *** a test of the emergency root-your-box-because-your-version-is-
+    echo *** low-system, had this been an actual emergency I would have
+    echo *** done something far more interesting.  Thank you and have a
+    echo *** lovely day!
+    echo *** ------------------ WARNING - WARNING -----------------------
+    input_char "press q to quit, or any other key to continue" {
+	if ([$0] == [q]) {
+	    exit I'm off to upgrade my client, LALALALALA
+	}
+    }
+}
+#############################################################################
+### benchmarking stuff
+@a.modloadfinish=utime()
+@asec = word(0 $a.loadfinish) - word(0 $a.loadstart)
+@ausec = word(1 $a.loadfinish) - word(1 $a.loadstart)
+if (ausec < 0) {
+    @ausec+=1000000,asec--
+}
+
+@msec = word(0 $a.modloadfinish) - word(0 $a.modloadstart)
+@musec = word(1 $a.modloadfinish) - word(1 $a.modloadstart)
+if (musec < 0) {
+    @musec+=1000000,msec--
+}
+
+#############################################################################
+### the final hook (!)
+eval hook anduril_loaded ${asec}\.${ausec}s ${msec}\.${musec}s $aversion
+^assign -asec
+^assign -ausec
+^assign -a.loadstart
+^assign -a.loadfinish
+^assign -msec
+^assign -musec
+^assign -a.modloadstart
+^assign -a.modloadfinish
+
+### Fin.
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################
+

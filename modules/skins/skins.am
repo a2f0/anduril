@@ -1,0 +1,48 @@
+### $Id: skins.am,v 1.11 2001/10/28 10:11:58 wd Exp $
+
+:new module skins
+:mod skins version 85
+:mod skins desc skins support
+:mod skins author wd@anduril.org White_Dragon Chip Norkus
+:mod skins depend usage box list
+
+:new command slist
+:comm slist desc lists the current available skins
+:comm slist flags i
+:comm slist aliases skins themes
+:comm slist help \
+this command lists all skins currently available to load, skins are \
+located in the share/skins/ directory
+
+mstub slist
+
+:new command skin <skinname>
+:comm skin desc loads the specified skin
+:comm skin flags i
+:comm skin aliases sload theme
+:comm skin help \
+this command loads the specified skin from the share/skins/ directory in \
+the script, if it exists.
+
+alias a.skins.make_list {
+    @a.skins.list = []
+    fe ($glob($apath/share/skins/*.askin)) xx {
+	@push(a.skins.list $sar(g=.askin==$after(-1 / $xx)))
+    }
+}
+a.skins.make_list
+
+mstub skin
+
+:new command ssave [flags] <skinname> [desc]
+:comm ssave desc saves the current configuration to a skin
+:comm ssave help \
+this command saves the current settings to a skinfile, placed in the \
+share/skins directory.  By default it only saves formats, but you can tell \
+it whether or not to save configs and formats with the +/-c and +/-f flags \
+(i.e. to save configs, /ssave +c ..., to save formats and configs, /ssave \
++cf ...)
+
+mstub ssave
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

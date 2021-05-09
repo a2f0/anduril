@@ -1,0 +1,83 @@
+### $Id: xdcc.am,v 1.32 2002/01/28 07:17:36 wd Exp $
+
+:new module xdcc
+:mod xdcc version 56
+:mod xdcc desc XDCC package module
+:mod xdcc author wd@anduril.org White_Dragon Chip Norkus
+:mod xdcc save_cmd a.xdcc.save
+:mod xdcc depend box save usage util
+
+### xdcc array for packages
+@a.xdcc.pack_count=0
+
+:new command xdcc [cmd] [args]
+:comm xdcc aliases cdcc
+:comm xdcc flags i
+:comm xdcc help \
+there are several commands offered within, these include: %n \
+- desc <pack> <descr> %n %t changes the description for specified pack %n \
+- doffer <pack> %n %t removes pack specified from xdcc list %n \
+- list|ls %n %t lists all XDCC packages offered %n \
+- load %n %t loads the xdcc packs file (you might wish to do this if you \
+saved it in another running client) %n \
+- note <pack> [note] %n %t add (or remove) a note from specified back %n \
+- offer [filename(s)] %n %t adds a new package for offering %n \
+- pass[word] <pack> [password] %n %t sets a password on specified pack, \
+or turns it off %n \
+- plist|pls [#channel] %n %t lists dcc packs in current or specified \
+channel %n \
+- save %n %t saves xdcc pack listing \
+
+### this first one is a wrapper for the bottom two
+
+:new format xdcc_plist header for xdcc plist
+:form xdcc_plist arguments @packs@ @size@
+:form xdcc_plist flags i
+:form xdcc_plist slaves xdcc_plist_body xdcc_plist_body_note
+
+:new format xdcc_plist_body body for xdcc plist
+:form xdcc_plist_body arguments @pack@ @size@ @gets@ @desc@
+:form xdcc_plist_body flags %
+
+:new format xdcc_plist_body_note
+:form xdcc_plist_body_note arguments @note@
+:form xdcc_plist_body_note flags %
+
+mstub xdcc
+
+mstub a.xdcc.check_files
+mstub a.xdcc.save
+mstub a.xdcc.handle_ctcp
+
+^eval on #-ctcp $ac.hash(xdcc) "% % XDCC *" {a.xdcc.handle_ctcp $0 $3-}
+^eval on #-ctcp $ac.hash(xdcc) "% % CDCC *" {a.xdcc.handle_ctcp $0 $3-}
+			
+### configs
+:new config xdcc_save_packs save packs when xdcc module unloads/client exits?
+:conf xdcc_save_packs flags b
+:conf xdcc_save_packs value 1
+
+:new config xdcc_plist_chans channels to perform xdcc automatic plists in (space separated)
+:conf xdcc_plist_chans flags s
+
+:new config xdcc_plist_time number of minutes to wait before performing an xdcc plist
+:conf xdcc_plist_time flags nt
+:conf xdcc_plist_time value 0
+:conf xdcc_plist_time change_cmd a.xdcc.plist_time_chng_cmd
+
+alias a.xdcc.plist_time_chng_cmd {
+    ^timer -delete xdcc_plist
+    if (ac.config(xdcc_plist_time)) {
+	@:t=ac.config(xdcc_plist_time)*60
+	
+	timer -refnum xdcc_plist -repeat -1 $t {
+	    xdcc -s plist $ac.config(xdcc_plist_chans)
+	}
+    }
+}
+
+if (fexist($apath/etc/xdcc.packs)!=[-1]) {
+    ^eval load $apath/etc/xdcc.packs
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

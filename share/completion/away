@@ -1,0 +1,8 @@
+@a.completion.add(away)
+
+@a.completion.add(back)
+
+@a.completion.add(readlog)
+
+@a.completion.add(rmlog)
+

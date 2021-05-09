@@ -1,0 +1,3 @@
+@a.completion.add(autojoin %C %"a.network.list")
+@a.completion.alias(autojoin aj)
+

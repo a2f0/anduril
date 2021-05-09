@@ -1,0 +1,9 @@
+@a.completion.add(adduser %N %C %*)
+@a.completion.alias(adduser useradd)
+
+@a.completion.add(listuser)
+@a.completion.alias(listuser userlist)
+
+@a.completion.add(deluser %N %C)
+@a.completion.alias(deluser userdel)
+

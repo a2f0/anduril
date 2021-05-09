@@ -1,0 +1,6 @@
+# formats for type show_version
+ac.format.add         show_version I got bored, so i loaded anduril v@scriptver@ \(core: @core@\) on @clientver@
+ac.format.add         show_version anduril v@scriptver@ \(core: @core@\) running on @clientver@ on an @arch@ running @osname@/@osver@
+ac.format.add         show_version anduril\(@scriptver@[c@core@]/@clientver@) - @hostname@\(@osname@/@osver@)
+# ---
+

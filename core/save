@@ -1,0 +1,184 @@
+#############################################################################
+### $Id: save,v 1.6 2003/03/13 05:30:03 wd Exp $
+###
+### save functions
+ac.package
+
+###
+### ac.module.save(module)
+### saves the formats added for a module, as well as any configs,
+### and anything else necessary, to the files modules/<mod>/formats
+### and modules/<mod>/save
+###
+### also calls the module's save_cmd to do custom saving
+###
+
+alias ac.module.save (module) {
+    if (ac.module.find($module) == []) {
+	aerrecho no module $module loaded
+	return
+    }
+	
+    ### new: only rewrite the formats file if the module
+    ### file is newer than the formats file, otherwise, there certainly
+    ### isn't any reason to do it, now is there? =)
+    ### oh yeah, and don't write a file if there're no formats!
+
+#    @:file = [$apath/modules/$module/formats]
+#
+#    if (ftime($file) < ftime($apath/modules/$module/$module\.am) && \
+#	 ftime($file) <= modules[$module][loadedat] && \
+#	 modules[$module][formats][count] > 0) {	
+#	@unlink($file)
+#	@:fd = open($file W)
+#	if (fd < 0) {
+#	    aerrecho couldn't open file $file to save formats for module $module!
+#	    return
+#	}
+	
+	### and now to complicate matters, we try to save slaves right along
+	### with their master formats, and keep track of this.  (I'm sort of
+	### a pedantic massochist, but when you need to edit the formats file,
+	### you'll thank me!@)
+	### XXX: multiple levels of slavery are not going to be supported
+	###      very well here, unless we hit the toplevel master first.
+	###      (to do this, add the toplevel master format type first :)
+
+#	@:i = 0
+#	@:written=[]
+#	while (i < modules[$module][formats][count]) {
+#	    @:f = modules[$module][formats][$i]
+#	    if (findw($f $written) != -1) {
+#		@i++
+#		continue
+#	    } 
+#	    @:s = formats[$f][slaves]
+#	    @written#=[$f ]
+#	    if (s != []) {
+#		@write($fd # formats for type $f and slaves $formats[$f][slaves])
+#		@s = formats[$f][slaves]
+#		@written #= [$s ]
+#	    } else {
+#		@write($fd # formats for type $f)
+#	    } 
+#	    @:x = 0
+#	    while (x < formats[$f][formats][count]) {
+#		@write($fd ac.format.add $[-20]f $formats[$f][formats][$x])
+#		if (s != []) {
+#		    @:y = 0
+#		    while (word($y $s)) {
+#			@write($fd ac.format.add $[-20]word($y $s) $formats[$word($y $s)][formats][$x])
+#			@y++
+#		    }
+#		}
+#		@x++
+#		if (formats[$f][slaves] && x < formats[$f][formats][count]) {
+#		    # write a blank line, for sanity.
+#		    @write($fd )
+#		}
+#	    }
+#	    @write($fd # ---)
+#	    @write($fd )
+#	    @i++
+#	}
+#    }
+#	
+#    @close($fd)
+	
+    @file=[$apath/etc/modules/$module\.save]
+    @unlink($file)
+    @:fd = open($file W)
+	
+    if (fd < 0) {
+	aerrecho couldn't open file $file to save settings for module $module!
+	return
+    }
+
+    ### first, write the module version at the time of the save, and
+    ### then configs, formats, and commands within for comparison
+    ### at future loadtimes.
+#    @write($fd # module data at save time)
+#    @write($fd a.msave_data $module version $modules[$module][version])
+#    @write($fd a.msave_data $module formats $modules[$module][formats][list])
+#    @write($fd a.msave_data $module configs $modules[$module][configs][list])
+#    @write($fd a.msave_data $module commands $modules[$module][commands][list])
+    
+    @write($fd # configs for module $module)
+    @i = 0
+    while (i < modules[$module][configs][count]) {
+	@:c=modules[$module][configs][$i]
+	@write($fd ac.config.set $c $ac.config($c))
+	@i++
+    }
+	
+#	@write($fd # current formats for module $m)
+#	@i=[0]
+#	while (i<modules[$m][formats][count]) {
+#		@:f=modules[$m][formats][$i]
+#		@write($fd @format_$f = [$ac.quote_assign($(format_$f))])
+#		@i++
+#	}
+    @close($fd)
+    
+    if (modules[$module][save_cmd] != []) {
+	$(modules[$module][save_cmd])
+    }
+}	
+		
+
+###
+### ac.save(file)
+### saves other settings to a specified file
+###
+
+alias ac.save (file) {
+    if (file == []) {
+	return
+    }
+    @unlink($file)
+    //^save -bind -set -notify $file
+    @:fd = open($file W)
+    if (fd >= 0) {
+	fe (col col1 col2 hcol hcol1 hcol2 dcol dcol1 dcol2) xx {
+	    @write($fd ^assign $xx $($xx))
+	}
+	fe ($aliasctl(assign match format_)) xx {
+	    @write($fd @$xx = [$ac.quote_assign($($xx))])
+	}
+	@close(fd)
+    } else {
+	aerrecho couldn't save settings to $file
+    }
+	
+    ### save all module settings, too
+    fe ($ac.module.list) xx {
+	@ac.module.save($xx)
+    }
+}
+
+###
+### ac.module.save_list(file)
+### saves the modules currently loaded to a file...so they can be loaded.
+###
+
+alias ac.module.save_list (file) {
+    if (file == []) {
+	return
+    }
+    @unlink($file)
+    @:fd=open($file W)
+
+    if (fd < 0) {
+	return
+    }
+
+    fe ($sort($ac.module.list)) xx {
+	if (word(0 $modules[$xx][loader]) != [depend]) {
+	    @write($fd $xx)
+	}
+    }
+    @close($fd)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

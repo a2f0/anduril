@@ -1,0 +1,11 @@
+# Automatically generated network definition for enterthegame
+
+alias a.network.is_enterthegame {
+	if (match(*.enterthegame.com $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps enterthegame lmohts 30 6 d

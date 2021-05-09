@@ -1,0 +1,5 @@
+# formats for type xmms_info
+ac.format.add            xmms_info [mp3\(@plnum@\)]: @song@ \(@bitrate@kbps/@freq@kHz\)
+ac.format.add            xmms_info [mp3\(@plnum@\)]: @song@ \(@played@/@len@ - @bitrate@kbps/@freq@kHz\)
+# ---
+

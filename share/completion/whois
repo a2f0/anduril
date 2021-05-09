@@ -1,0 +1,7 @@
+@a.completion.add(whois %N*)
+@a.completion.alias(whois wi)
+
+@a.completion.add(wii %N)
+
+@a.completion.add(whowas %N)
+

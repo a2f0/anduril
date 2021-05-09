@@ -1,0 +1,254 @@
+------------------------------------------------------------------------------
+$Id: README,v 1.27 2003/11/01 01:55:10 wd Exp $
+------------------------------------------------------------------------------
+[Table of Contents]:
+....0: Preface / Requirements
+....1: For people who just can't wait
+....2: For the less lazy, or for the lazy where #1 didn't work
+....3: For people who want to know more
+....4: Where to get this script (and other resources)
+....5: Writing modules
+....6: Why is this script so 'slow'?
+....7: Rants and other nonsense.
+...97: I wanna help! (PUT MY NAME IN THE CREDITS, BITCH)
+...98: Credits
+...99: Points of contact.
+------------------------------------------------------------------------------
+[0: Preface / Requirements]:
+
+I think all of the information in this file is valid and at least somewhat
+important, but you may disagree, so be it.  If you don't want to read
+another word, please read the following, and section 1, and then go have
+fun!
+
+Requirements:
+1. A modicum of knowledge of navigating Unix file systems, and doing simple
+   tasks within the system, as well as a very basic knowledge of IRC.
+2. ircII-EPIC4-1.1.7+ (I have changed my policy on client version and
+   script development, see below for reasons[3])  You might get away with
+   something a little lower, but I don't recommend trying.
+3. Roughly 2mb of free disk space (this does not include space needed for
+   logging, or anything extra you do.)  The development branch, with no
+   extra junk in the directory, is about 1.4mb.  Most of this is used by the
+   modules.  The script is commented quite heavily, and if there is
+   sufficient interest I'll be happy to produce a version without any
+   comments whatsoever for the general public to use.
+
+------------------------------------------------------------------------------
+[1: For people who just can't wait]:
+
+Setup: Extract the script.  Make sure it all came out okay.  That's it.
+
+Loading is simple, just /load <path to script>/anduril.irc
+You may want to change/try different skins.  Check out the /slist command
+for lists of skins.  You might also want to do other customizations, Play
+around with /config, /flist, and /format.  Enjoy!
+
+Lastly, and I shouldn't even need to say this, /ahelp will help in a pinch
+------------------------------------------------------------------------------
+[2: For the less lazy, or for the lazy where #1 didn't work]: 
+
+There's actually not much to say here anymore, at least if you just want to be
+in the 'less lazy' category.  Previously, the script required some work to
+move it around, that should theoretically no longer be the case.  HOWEVER, if
+just loading the script doesn't work for you, then your system is missing the
+realpath(3) function.  I'd appreciate it if you let me know what system
+you're running on.  Then, to fix this, edit the file "anduril.irc", and change
+the line that says:
+@apath = before(-1 / $realpath($word(1 $loadinfo())))  
+to:
+@apath = twiddle(~/anduril)
+(or wherever you put it).  This *should* fix any problems you might be having.
+I know realpath(3) exists on non-archaic versions of FreeBSD, Linux, SunOS,
+and IRIX.  (I've tested these all directly)
+------------------------------------------------------------------------------
+[3: For people who want to know more]: 
+
+This is actually only a small sample of the documentation I've written for
+this script.  Nothing bugs me more than a program or script for which there
+is no documentation, and a lot of times when I got stuck on a script
+problem, I'd come back and document.  You'll find lots of stuff in the all
+caps files in this current directory, and tons of stuff in the doc/
+directory.  Some of it may interest you, some of it may not.  If you think
+something ought to be better documented, let me know, I'll probably just say
+you're whiney, but hey....you never know, right?  If you have a question
+about how something works, feel free to ask.
+
+Policy on script release/client compatibility:
+When I started this script, I wanted to stick to developing on the oldest
+release EPIC I could (at the time EPIC4-2000) to provide high compatibility
+for people.  However, I feel that people will be better suited with a script
+that may ask them to upgrade their client, but that will run faster and better
+because of the new client.  I don't develop on alpha EPICs, but I will
+develop on beta EPICs.  I try to track the latest changes in EPIC and make
+this script take advantage of them, so if a new change has been made in a
+beta that I'd like to use, I will up the requirements on the next release.
+hop's releases (alpha and especially beta, and uber-especially actual
+releases) are always very stable, so I'm not much concerned about stability
+problems.  So there you go, that's why you should upgrade.  I will provide
+ample warning between minor versions in regards to upgrade necessity in
+the form of a very intrusive warning when the script is loaded.
+------------------------------------------------------------------------------
+[4: Where to get this script (and other resources)]:
+
+Well yes, you do already have it, however, updates will (hopefully) happen
+frequently.  There are several places from whence you can get this script:
+
+WWW: http://www.anduril.org/script/
+     http://scripts.epicsol.org/           <--.  NOT GAURANTEED TO
+     http://irc.themes.org/                <--'  BE UP TO DATE!
+
+FTP: ftp://ftp.anduril.org/pub/anduril/script/ (XXX: broken)
+
+CVS: cvs.telekinesis.org:
+     cvs -d :pserver:anoncvs@cvs.telekinesis.org:/home/cvs login
+     (password: anoncvs)
+     cvs -d :pserver:anoncvs@cvs.telekinesis.org:/home/cvs co anduril
+     There is also a CVSweb interface available at:
+     http://cvs.telekinesis.org/cgi-bin/cvsweb.cgi/anduril/
+
+IRC: #anduril on DALnet (irc.dal.net) from wd-xdcc.  This should be your
+     last resort.  I may or may not be running my xdcc client this week, I'm
+     a very forgetful person like that.  I may be in #anduril on EFnet, and
+     I may have the latest on my xdcc list.  No guarantees.
+     - please don't complain to me about why my channel is on DALnet and
+       not EFnet.  I'm already aware that the majority of UNIX console IRC
+       users are probably on EFnet, but I just don't fucking care, okay?
+
+Mailing lists:
+     Two mailing lists are provided for script users:
+     script@anduril.org:  For general help and questions (and discussion)
+     about the script, go here.  To subscribe or make other administrative
+     requests, send a mail with the canonical majordomo actions to:
+     script-request@anduril.org.  Alternatively, you can visit the site:
+     http://lists.anduril.org/listinfo/anduril-script
+
+     cvs@anduril.org:  This list is moderated, and is the point of receipt for
+     cvs commit messages.  To subscribe/etc, follow the above instructions, but
+     replace 'script' with 'cvs'.
+
+------------------------------------------------------------------------------
+[5: Writing modules]:
+
+First of all, read doc/core.  This tells you all the stuff I wrote that you
+don't have to.  Most of it is stuff for the core, but there are some important
+functions in there.  I will probably be writing a module writer's guide soon,
+fwiw.
+
+After that, have a look at all the other files in doc (config, formats,
+modules) they contain useful imformation on module syntax.
+
+And if you wrote the most k-rad super elite module ever and want it included
+in the script, or just posted on the script's website, drop down to the
+contacts section and send me your stuff.
+
+No, I will NOT post war/nuke/packet kidlet/lameassbitch modules.  Don't even
+ask.  Most EPIC users are more mature than that anyways.
+------------------------------------------------------------------------------
+[6: Why is this script so 'slow'?]
+
+This is probably no longer very valid.  If you find the script slow please
+let me know what kind of hardware you have, where it is being slow, and if
+you have any suggestions for improvement.  Thanks.
+------------------------------------------------------------------------------
+[7: Rants and other nonsense]
+
+(This used to be at the top of the file, but it doesn't belong there)
+
+First, it's pronounced and-oo-ril, just to get that out of the way.  It
+comes from Tolkien's "The Lord of the Rings" trilogy, in case you wondered.
+
+I wrote this script because I got tired of some of BX's obnoxious features,
+mostly all the lame shit that seemed like packet-kiddie/warez-pup crap, and
+the way it interpreted stuff, and with a src download of well over 1mb (1.5
+I think) the inherent bloat in the thing. So I moved to EPIC, but found that
+none of the scripts really did everything I wanted them to do, and since I
+haven't written a major IRC script in something like four years, and
+moreover have never done so for ircII, I figured I'd try my hand at it. (I
+need to say I owe a lot of thanks to the people in #epic on EFnet for
+helping me with my scripting in general)
+
+This script is meant to be completely modular, i.e., if you don't want it,
+don't load it.  The core script contains *nothing* but module support for
+configuration, formatting, and actual execution.  There aren't even any
+/on's, in fact, the script won't even introduce itself without loading the
+appropriate modules.  Somewhere along the line my golden dream failed
+somewhat. The script is still really really modular.  You can still take out
+oodles of stuff, and in theory you could swiss-cheese the thing to death and
+it would be okay, but some modules make allowances for other modules.  Take
+skins for example.  There has to be a special allowance for both status bars
+and colors, I couldn't find a good way around that, so i made a special
+allowance.  It's no longer perfect, but it's still quite good, I think.  If
+you are the average user chances are you won't care two licks about any of
+this, but then...you are reading a section emblazoned with the name 'Rants
+and other nonsense.'
+
+There are a few other small exceptions, sort of.  Operationally, of course,
+it would be impossible to create a core for modules without having some
+code that is aliases and variables.  For a list of these see doc/core.
+
+This script contains no backdoors.  Go ahead, look.  I'm not like that.
+------------------------------------------------------------------------------
+[97: I wanna help! (PUT MY NAME IN THE CREDITS, BITCH)]:
+
+Cool! I need:
+
+- To know that people are using this thing.  Please, email me (yes, my
+  email works now!) and let me know if you're using the script.  Tell me
+  what you like, what you dislike, and what you want.  At this point, after
+  having invested a decent chunk of time, I think I just need to hear that
+  three or four people like/use this script to continue with it.  This is still
+  true, even though I have a verifiable userbase of at least 10 people. ;)
+- Modules with special support for other IRC networks (non EF/DALnet)
+- General cool stuff (if you're in the mood, be creative!)
+- ANSI art for the opener.  I'd really like three or four nice color ANSI
+  logos to spout at the user upon startup, anyone who could provide these
+  would be a truly princely individual.  Please please *please* :)
+- Suggestions!  I really want to know what people want as features in their
+  IRC scripts.  Even if you're the only one who wants it, or so you think,
+  I'd still like to hear from you.
+------------------------------------------------------------------------------
+[98: Credits]:
+
+Code contribution:
+.........tbaur: first person to get commit access to the script.  tim has
+                already done a bunch of stuff in the first week to make the
+                script more useful on multiple networks.
+
+Others:
+cait-sith/mike: encouragement is good
+........VaultX: earliest beta tester, lots of ideas etc
+............PS: beta tester, ideas too!  very faithful little knee-grow
+.........valar: lots of debugging, constructive (typically) criticism, and
+                faithfulness.
+............ld: suggestions, ideas, and more.  thanks!
+..........john: for scoring me the second half of lateralus, as well
+                as providing good feature/bug input, and a bunch of
+                other stuff (dvd == elite)
+.........daedo: For ideas borrowed from core.  Too bad yer a windoze bitch
+                now!@
+...........sja: for the nifty 'countries' db with phone codes!
+
+------------------------------------------------------------------------------
+[99: Points of contact]:
+
+If you want to send me cookies, kudos, thanks, applause, naked pictures of
+yourself (men need not apply), or any other matter of good paraphernalia, or
+if you just want to ask me a question, you can find me in the following
+places:
+
+IRC      : DALnet (just about always there): White_Dragon, wd
+           EFnet (rarely): WhiteDrgn, sometimes wd
+Email    : wd@anduril.org
+Real life: Chip Norkus
+Address  : If you really really want it just ask.
+
+Addendum : PLEASE PLEASE PLEASE DO NOT EMAIL ME ASKING ME HOW TO SETUP THE
+	   SCRIPT!  If you can't figure it out, then well, you probably
+	   shouldn't be using either the client or the script.  If you ask
+	   me a question I covered in this file, I will instantly trash your
+	   email.  I get a lot of email, IRC not withstanding, and I just
+	   don't have time to help those who can't help themselves.  I'm
+	   doubly disappointed because I wrote this before I got email from
+	   people, but now I AM getting email anyways.  Ugh!
+------------------------------------------------------------------------------

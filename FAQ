@@ -1,0 +1,85 @@
+------------------------------------------------------------------------------
+$Id: FAQ,v 1.3 2002/10/24 19:26:28 wd Exp $
+------------------------------------------------------------------------------
+[Frequently Asked Questions]:
+....1: How long have you been working on this / Don't you have a life /
+       Haven't you got better things to do?
+....2: My status bars and boxes have funny looking 'A' characters and stuff!
+       What gives?
+....3: What's that 'I' in the status bar?
+....4: Where's the flood protection?
+....5: When are you going to do <X>?
+....6: Are you interested in <X>?
+------------------------------------------------------------------------------
+[1: How long have you been working on this / Don't you have a life /
+    Haven't you got better things to do?]:
+
+About two years.  No.  Haven't you?
+
+Seriously, though.  I've devoted a decent chunk of man-hours to this
+script, and I do it because I like it.  At first I just wanted to make a
+script for myself.  Then some of my friends started using it.  Then I had a
+community of users.  Now I want to maintain a quality project.
+
+------------------------------------------------------------------------------
+[2: My status bars and boxes have funny looking 'A' characters and stuff!
+    What gives?]:
+
+This is one of those horrible font problems.  Unfortunately, if you're a
+foreign (non-us-ascii) language (character set) devotee, I have no good
+answers for you.  All I can say is that I have tried to provide
+non-codepage-dependent varieties of formats for you.  Ideally, I'd love
+to see unicode support in the script so I could use linedrawing characters
+and still support everybody's character sets.  I'm not sure this is
+anywhere near being realistic, though.
+
+Oh, if you are just a us-ascii consumer, all you need to do is find and
+use a 'cp437' (codepage 437, IBM DOS, ...) font for your terminal
+application of choice.  In X-windows this will be one of the nexus,
+sabvga, vga, or similar fonts that are floating around.  In Windows
+(PuTTY or SecureCRT) it will be the Terminal font.
+
+------------------------------------------------------------------------------
+[3: What's that 'I' in the status bar?]:
+
+It stands for 'Insert mode'.  It basically means that instead of overwriting
+characters on the input line, you simply insert instead.  If you hit the
+'Insert' key on your keyboard EPIC will switch you from Insert to Overwrite
+mode, and vice versa.  It can be handy to switch back and forth depending on
+your typing style.
+
+------------------------------------------------------------------------------
+[4: Where's the flood protection?]:
+
+I just haven't written it yet.  I know this is mentioned in TODO, but it's a
+very popular question.  Most scripts do such a horrible job at flood
+protection that having any at all is near-pointless.  I'd like to avoid that
+by creating a really nice system.  On the other hand, there's lots of other
+things I could be working on (in and out of the script) that interest me
+more.  Sorry.
+
+------------------------------------------------------------------------------
+[5: When are you going to do <X>?]:
+
+Excellent question.  Please see the 'TODO' file (or relevant webpage link).
+If your feature is mentioned there, that means I've already given it special
+consideration and it will be coming sooner than if it wasn't. :)  If your
+feature isn't there, that means I either haven't heard of it, haven't
+thought of it, think it would not be useful, or simply don't think it would
+be possible to impliment.  In any event you can contact me (see the README)
+and ask me about it if you like.
+
+------------------------------------------------------------------------------
+[6: Are you interested in <X>?]:
+
+This is a weird question, but it basically boils down to one of a few things:
+  * Hosting: I've already got an excellent host.
+  * A new website: I'm perfectly happy with the current one.
+  * Women: My girlfriend would be pissed.
+  * Small presents:  Absolutely!  Contact me for details!
+
+In any event, thank all of you for your continued support (I've reveived
+lots of offers for lots of things from the community).  Even if I turn you
+down, the offer was still most assuredly appreciated.
+
+------------------------------------------------------------------------------

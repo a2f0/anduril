@@ -1,0 +1,11 @@
+# Automatically generated network definition for undernet
+
+alias a.network.is_undernet {
+	if (match(*undernet.org $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps undernet hlmot u 9 6 u

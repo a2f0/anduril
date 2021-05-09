@@ -1,0 +1,34 @@
+### $Id: help.am,v 1.20 2001/10/28 10:11:54 wd Exp $
+
+:new module help
+:mod help version 32
+:mod help desc user help module
+:mod help author wd@anduril.org White_Dragon Chip Norkus
+:mod help depend box list
+
+:new command ahelp [-v] [config|command|format|module] [topic]
+:comm ahelp desc user help command
+:comm ahelp aliases ?
+:comm ahelp flags i
+:comm ahelp xref comm:man
+:comm ahelp help \
+this is the command to access the script's various help features.  when given \
+with no arguments, it lists the major commands the script provides.  when \
+given one or two paramters, it provides help/information on the given \
+subject.  For example: /help config operview_size might provide help on the \
+'operview_size' config.  If no type is given, commands are assumed.  If the \
+-v flag is passed, more data is given. (verbose)
+
+mstub ahelp
+
+:new command man [#] <topic>
+:comm man desc EPIC help command wrapper
+:comm man flags i
+:comm man xref comm:ahelp
+:comm man help \
+this command provides an interface to the client's help files more like \
+the *IX 'man(1)' command.
+
+mstub man
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,38 @@
+#############################################################################
+### $Id: command,v 1.2 2001/10/28 10:11:48 wd Exp $
+### command related aliases
+###
+ac.package
+
+###
+### ac.command.find(command)
+### returns the command's name if it exists, or nothing.
+###
+
+alias ac.command.find {
+    return $commands[$0][name]
+}
+
+###
+### ac.command.find_alias(command)
+### returns the actual command an alias is set for, or nothing if no such
+### alias exists.
+###
+
+alias ac.command.find_alias {
+    fe ($ac.command.list) xx {
+	if (xx == [$0]) {
+	    return $0
+	}
+
+	fe ($commands[$xx][aliases]) yy {
+	    if (yy == [$0]) {
+		return $xx
+	    }
+	}
+    }
+    return
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

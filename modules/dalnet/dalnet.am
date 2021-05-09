@@ -1,0 +1,125 @@
+### $Id: dalnet.am,v 1.21 2002/07/05 06:36:28 wd Exp $
+
+:new module dalnet
+:mod dalnet version 33
+:mod dalnet desc DALnet support module
+:mod dalnet author wd@anduril.org White_Dragon Chip Norkus
+:mod dalnet depend save
+:mod dalnet save_cmd a.dalnet.save
+
+:new command autoidentify [-][nick] [pass]
+:comm autoidentify desc add a nick to automatically identify for on DALnet
+:comm autoidentify help \
+this command allows you to add a nick to auto-identify for on DALnet.  I \
+do not recommend or disrecommend this use, but please beware of the \
+security implications.  to add a nick simply do: /autoidentify nick, to \
+remove it, /autoidentify -nick.  to list nicks for which you autoidentify, \
+use the command with no arguments.
+
+mstub autoidentify
+
+^eval on #-hook -$ac.hash(dalnet) "network.connect dalnet" {
+	### send along our autoidentify, if we have more than five entries, send
+	### along the first five, then one every second after that.
+	@:t = 0
+
+	for (@:n = 0,n < a.dalnet.ai_count, @:n++) {
+		if (a.dalnet.ai[$n][nick] == 0) {
+			continue
+		}
+		if (n > 4) {
+			@:t++
+			timer $t /nickserv identify $a.dalnet.ai[$n][nick] $a.dalnet.ai[$n][pass]) 
+		} else {
+			/nickserv identify $a.dalnet.ai[$n][nick] $a.dalnet.ai[$n][pass]
+		}
+	}
+}
+
+mstub a.dalnet.add_ai
+mstub a.dalnet.save
+
+@a.dalnet.ai_count = 0
+if (fexist($apath/etc/dalnet.nicks) != -1) {
+	^eval load $apath/etc/dalnet.nicks
+}
+
+@a.server.sfilter.add(akill a.dalnet.akill.display a.dalnet.akill.log)
+@a.server.sfilter.add(unakill a.dalnet.akill.display a.dalnet.akill.log)
+
+^eval ^on #-hook $ac.hash(dalnet) "module_loaded server *" {
+    @a.server.sfilter.add(akill a.dalnet.akill.display a.dalnet.akill.log)
+    @a.server.sfilter.add(unakill a.dalnet.akill.display a.dalnet.akill.log)
+}
+
+^on ^server_notice "% % % -- from OperServ*: akill for % by % affects % % % for % %" {
+    @:addr = stripcrap(BOLD $8)
+    @:by = stripcrap(BOLD $10)
+    @:users = stripcrap(BOLD $12)
+    @:users = [$users ${users == 1 ? [user] : [users]}]
+    @:pct = stripcrap(BOLD $after(\( $before(\) $14)))
+    @:time = stripcrap(BOLD $16)
+    @:time *= 60
+
+    if (by == [(Hidden)]) {
+	@:by = [*]
+    }
+    @a.server.sfilter(akill $by $addr $time $pct $users)
+}
+
+^on ^server_notice "% % % -- from %: Removed timed autokill %" {
+    @:from = chop(1 $5)
+    if (index(. $from) != -1) {
+	    @:from = a.network.gss($from)
+    }
+    @a.server.sfilter(unakill $from $9 timed)
+}
+
+alias a.dalnet.akill.display (type, win, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+    
+    @:by = from
+    @:addr = word(0 $msg)
+    switch ($type) {
+	(akill) {
+	    @:time = word(1 $msg)
+	    @:pct = word(2 $msg)
+	    @:users = restw(3 $msg)
+	    a.oper.echo $win $(col1)akill$(dcol1)\($(hcol1)$by$(dcol1)\)$(ncol) $addr $(dcol1)[$(ncol)$tdiff3($time)$(dcol1)] \($(ncol)$users $(dcol1)\($(ncol)$pct$(ncol)$(dcol1)\)\)$(dcol1)
+	}
+	(unakill) {
+	    if (word(1 $msg) == [timed]) {
+		@:timed = [timed ]
+	    }
+	    a.oper.echo $win removed $timed\autokill for $addr $(dcol1)\($(hcol1)$from$(dcol1)\)
+	}
+    }
+}
+
+alias a.dalnet.akill.log (type, file, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+    
+    @:by = from
+    @:addr = word(0 $msg)
+    switch ($type) {
+	(akill) {
+	    @:time = word(1 $msg)
+	    @:pct = word(2 $msg)
+	    @:users = restw(3 $msg)
+	    @a.log(server/$file akill\($by\) $addr [$tdiff3($time)] \($users \($pct\)\))
+	}
+	(unakill) {
+	    if (word(1 $msg) == [timed]) {
+		@:timed = [timed ]
+	    }
+	    @a.log(server/$file removed $timed\autokill for $addr \($from\))
+	}
+    }
+}
+
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

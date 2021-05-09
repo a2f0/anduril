@@ -1,0 +1,734 @@
+### $Id: completion.stubs,v 1.22 2003/11/08 03:16:25 wd Exp $
+ac.package completion
+
+@a.completion.cycle.count = 0
+
+### this has been split up into three different functions, for msgtab,
+### nick comp, and command completion
+alias a.completion.exec (auto, line) {
+    if (line == []) {
+	@:line = builtin_expando(L)
+    }
+
+    ### now determine our completion type.  this is relatively easy
+    if (left(1 $line) != builtin_expando(K) && line != [] && auto) {
+	@a.completion.exec.ncomp($line)
+	return
+    }
+    ### okay, it's either msgtabbing or command completion
+    ### we know it's msgtab if the line is empty, or if the first two words
+    ### are what they were at the last msgtab
+    @:cmd = after($builtin_expando(K) $word(0 $line))
+    @:nick = word(1 $line)
+    if (line == [] || \
+	((cmd == [m] || cmd == [msg]) && nick == a.completion.mtab.last)) {
+	@a.completion.exec.msgtab($line)
+	return
+    }
+    @a.completion.exec.adv($line)
+}
+	
+### I've overhauled this function completely.  Hopefully, it will behave
+### better now.  ugh.
+alias a.completion.exec.adv (line) {
+    ### first of all, determine what we're completing for.  what this means
+    ### is that if the input is a command, find the syntax for the current
+    ### command and complete based on that, or otherwise complete for
+    ### nicknames in our current channel.  of course if the current command
+    ### is shorthand, we have to see if we can find out what the command
+    ### really is, too.
+
+    ### these are necessary no matter what kind of input we have, so we grab
+    ### them right away.
+    @:i = a.completion.cursword($line)
+    @:w = word(1 $i)
+    @:i = word(0 $i)
+
+    if (left(1 $line) == builtin_expando(K)) {
+	if (mid(1 1 $line) == builtin_expando(K)) {
+	    ### use the 'built in' completion.
+	    parsekey command_completion
+	    return
+	}
+	@:comm = builtin_expando(K)
+	### determine if we're completing for command names, or doing
+	### something else.
+
+	@:line = rest(1 $line)
+    } else {
+	@:comm = []
+    }
+
+    ### happy-fun super nifty-hour, see if we are in the middle of cycling
+    ### (our line should be identical to its previous state)
+
+    if (line == a.completion.cycle.line && i == a.completion.cycle.index) {
+	### wrap around if need be.
+	if (ac.config(comp_cycle) == 2 && a.completion.cycle.count == 1 && \
+	    #a.completion.cycle.words > ac.config(comp_max_disp) && \
+	    a.completion.cycle.first) {
+	    @a.completion.display_matches(x $a.completion.cycle.words)
+	}
+	if (a.completion.cycle.count == #a.completion.cycle.words) {
+	    @a.completion.cycle.count = 0
+	    @a.completion.cycle.first = 0
+	}
+	### next. please.
+	@:word = word($a.completion.cycle.count $a.completion.cycle.words)
+	@:line = chngw(${i - 1} $word $line)
+	@a.completion.cycle.count++
+	@a.completion.cycle.line = line
+	a.completion.cursor_to_word $i $comm$line
+	return
+    }
+
+    if (comm != []) {
+	### okay, now if we're on the command, we're just doing simple
+	### completion for commands.  yippy skippy.
+	if (i == 1) {
+	    if (line != []) {
+		@:list = a.completion.complete(0 $word(0 $line) $a.completion.cmd_list)
+	    } else {
+		@:list = a.completion.cmd_list
+	    }
+	    @:w = rest(1 $w)
+	} else {
+	    ### we need to find out what we're completing for, and get the
+	    ### necessary lists, like we do elsewhere.  to do this we need to
+	    ### examine the given command, and try and expand it (and expand it
+	    ### on the command line, too).  if the command is ambiguous, we
+	    ### return silently.
+	    @:m = a.completion.complete(0 $word(0 $line) $a.completion.cmd_list)
+	    switch ($#m) {
+		(1) {
+		    @:cmd = m
+		}
+		(*) {
+		    ### if we can't get a bead on what command this is, give up
+		    ### now
+		    return
+		}
+	    }
+	    @:m = a.completion.adv.word($i-$w $m $restw(1 $line))
+	    if (left(1 $m) == [%]) {
+		if (pass(f $m) != []) {
+		    @:pcttype = [f]
+		}
+		@:list = a.completion.adv.pct($m $w)
+	    } else {
+		@:list = m
+	    }
+	}
+    } else {
+	### just cycling for nicks in our current channel.
+	if (w != []) {
+	    @:list = a.completion.complete(0 $w $chanusers($builtin_expando(C)))
+	} else {
+	    @:list = chanusers($builtin_expando(C))
+	}
+    }
+
+    ### now for the hard part, doing word replacement.  this can get tricky.
+    ### if our list only has one entry, go for the quick replace and move on
+    ### thing, otherwise life becomes more complicated.
+
+    switch ($#list) {
+	(0) {
+	    beep
+	    return
+	}
+	(1) {
+	    @:line = chngw(${i-1} $list $line)
+	    a.completion.cursor_to_word $i $comm$line
+	    @:space = [ ]
+	    if (pcttype != [f] || (pcttype == [f] && right(1 $list) != [/])) {
+		xtype -l $space
+	    }
+	}
+	(*) {
+	    ### if the user wants tab cycling, give it to them,
+	    ### otherwise, just display our list and possibly change our
+	    ### word, then move on
+	    if (!ac.config(comp_cycle)) {
+		@a.completion.display_matches(x $m)
+		if (w != 0) {
+		    @:line = chngw(${i-1} $uniq($list) $line)
+		} else {
+		    @:line #= word(0 $list)
+		}
+		a.completion.cursor_to_word $i $comm$line
+	    } else {
+		@a.completion.cycle.count = 2
+		@a.completion.cycle.index = i
+		@a.completion.cycle.words = list
+		@a.completion.cycle.first = 1
+		@a.completion.cycle.comm = comm
+		if (ac.config(comp_cycle) == 2) {
+		    @a.completion.display_matches(x $a.completion.cycle.words)
+		}
+		### if it's an empty word, we should be at EOL. append!
+		if (w != []) {
+		    @:line = chngw(${i - 1} $word(1 $list) $line)
+		} else {
+		    @:line #= word(0 $list)
+		}
+		a.completion.cursor_to_word $i $comm$line
+		@a.completion.cycle.line = line
+	    }
+	}
+    }
+}
+
+alias a.completion.exec.msgtab (line) {
+    ### /msg stuff
+    ### if the user had a line there, preserve it, after the user stuff
+    if (word(0 $a.completion.mtab.list) == []) {
+	parsekey erase_line
+	xtype -l /msg $word(0 $a.completion.mtab.list)
+	return
+    }
+
+    if (restw(2 $line)) {
+	@:linelen = strlen($line)
+	@linelen -= strlen($leftw(2 $line))+1
+	@:lsave = right($linelen $line)
+    }
+    if (word($a.completion.mtab.index $a.completion.mtab.list) == []) {
+	@a.completion.mtab.index = 0
+    }
+    parsekey erase_line
+    if (line) {
+	xtype -l $word(0 $line) $word($a.completion.mtab.index $a.completion.mtab.list) $lsave
+    } else {
+	xtype -l $builtin_expando(K)msg $word($a.completion.mtab.index $a.completion.mtab.list) $lsave
+    }
+    @a.completion.mtab.last = word($a.completion.mtab.index $a.completion.mtab.list)
+    @a.completion.mtab.index++
+    return
+}
+
+alias a.completion.exec.ncomp (line) {
+    if (!ac.config(nick_comp)) {
+	parsekey erase_line
+	xtype -l $line
+	parsekey send_line
+	return
+    }
+
+    ### this function is only for automatic nick completion now, everything
+    ### else is done with cycling.
+    ### first grab the rest of line sans the first word
+    fe ($ac.config(nick_comp_chars)) xx {
+	@:n = before($xx $line)
+	@:linelen = strlen($line)
+	@:linelen -= strlen($n$xx)
+	@:lsave = right($linelen $line)
+	break
+    }
+
+    if (n == [] || numwords($n) != 1) {
+	parsekey erase_line
+	xtype -l $line
+	parsekey send_line
+	return
+    }
+
+    @:i = findw($right(1 $n) $ac.config(nick_comp_chars))
+    if (i != -1) {
+	@:i = strlen($n) - 1
+	@:n = left($i $n)
+    }
+
+    ### now complete!
+    @:m = a.completion.complete(0 $n $chanusers())
+    switch ($#m) {
+	(1) {
+	    parsekey erase_line
+	    xtype -l $fparse(nick_comp_string $m)$lsave
+	}
+	(0) {
+	    parsekey erase_line
+	    xtype -l $line
+	}
+	(*) {
+	    if (ac.config(ncomp_keep_ambiguous)) {
+		parsekey erase_line
+		xtype -l $line
+	    } else {
+		parsekey erase_line
+		xtype -l $fparse(nick_comp_string $word(0 $m))$lsave
+	    }
+	}
+    }
+    parsekey send_line
+}
+
+alias a.completion.remove_nick {
+    @:line = builtin_expando(L)
+    @:cmd = after($builtin_expando(K) $word(0 $line))
+    @:nick = word(1 $line)
+    if (line == []) {
+	### delete first entry in list, reset index
+	if (word(0 $a.completion.mtab.list)) {
+	    aecho popped $word(0 $a.completion.mtab.list) off the msgtab
+	    @a.completion.del_item(a.completion.mtab.list $word(0 $a.completion.mtab.list))
+	    @a.completion.mtab.index = 0
+	}
+    } elsif ((cmd == [m] || cmd == [msg]) && nick == a.completion.mtab.last) {
+	### chuck out the current entry from the list if it is there, do not
+	### modify the index.
+	@a.completion.del_item(a.completion.mtab.list $nick)
+	if (restw(2 $line) == []) {
+	    parsekey erase_line
+	}
+    }
+}
+
+alias a.completion.cursor_to_word (word, line) {
+    ### move the cursor to the (end of the) specified word.  parsekey rocks.
+    parsekey erase_line
+    xtype -l $line
+    parsekey beginning_of_line
+    for (@:i = strlen($leftw($word $line)), i, @:i--) {
+	parsekey forward_character
+    }
+}
+
+### this finds the word position of the cursor, and returns that AND
+### the word it's on
+alias a.completion.cursword (line) {
+    ### grab the line, shave off after our cursor position, and work
+    ### from there.  oh, if the cursor is at the end of the line, 
+    ### then increment our wordcount by one if the last character is a space
+    @:l = left(${curpos()+1} $line)
+    @:w = #l
+    if (curpos() == strlen($line) && right(1 $line) == [ ]) {
+	@:w++
+    }
+    return $w $word(${w-1} $line)
+}
+
+### now returns the longest nonunique string in the matches, then
+### the matches
+### now takes a first argument, either a 1 or a 0.  if 1 it uses
+### the new style completion, if 0 it uses the old (the old
+### being that it returns nothing in the event of no matches
+alias a.completion.complete (type, word, args) {
+    if (args == []) {
+	return $word
+    }
+
+    @:args = uniq($args)
+    if (word == []) {
+	return $args
+    } elsif (findw($word $args) >= 0) {
+	return $word($findw($word $args) $args)
+    }
+
+    @:i = 0
+    fe ($ac.config(comp_masks)) xx {
+	@:s[$i][mask] = sar( @ $word $xx)
+	@:s[$i][matches] = pattern($s[$i][mask] $args)
+	@:s[$i][n] = numwords($s[$i][matches])
+	@:i++
+    }
+
+    ### assuming we didn't return, go find the least number of matches
+    ### in the lists, and return that...
+    ### ugh, problems here.  if a higher-ranking mask registers multiple
+    ### values, all values should be returned even if a lower-ranking mask
+    ### returns one. if there is a single match, return it as the first though.
+    ### the way this ends up is that the array must be traversed twice, if
+    ### on the second traversal we find a single match and no level above has
+    ### had multiples, we return.  ugh, my head hurts too.
+    for (@:x = i - 1, x > -1, @:x--) {
+	if (s[$x][n] == 1) {
+	    @:smatch #~ [$s[$x][matches] ]
+	} elsif (s[$x][n] > 1) {
+	    @:match #~ [$s[$x][matches] ]
+	}
+    }
+    ### okay, here's how this works.  if we find a single we return it.  if
+    ### we find anything other than a total lack of matches we break the
+    ### loop, this ensures that we can only return if this is the first
+    ### match AND if it is a single match.
+    for (@:x++, x < i, @:x++) {
+	if (s[$x][n] == 1) {
+	    return $s[$x][matches]
+	} elsif (s[$x][n] != 0) {
+	    break
+	}
+    }
+    @:match = uniq($smatch $match)
+	
+    ### okay, if match ended up being unique, return it.  ugh.
+    if (numwords($match) == 1) {
+	return $match
+    }
+
+    if (type == 1) {
+	@:w = prefix($match)
+	@function_return = w ? w : word
+	if (match != []) {
+	    @push(function_return $match)
+	}
+	return
+    } else {
+	return $match
+    }
+}
+
+alias a.completion.display_matches {
+#   @:words = sort($restw(1 $*))
+    @:words = restw(1 $*)
+    if (#words > ac.config(comp_max_disp) && !((time() - a.cdm_time) <= 10 && a.cdm_w == #words)) {
+	aecho there are $#words matches, hit tab again to display
+	@a.cdm_time = time()
+	@a.cdm_w = #words
+	return
+    }
+    aecho completion matches multiple options:
+    @:i = 0
+    @:s = []
+    fe ($words) xx {
+	@:i++
+	@push(s $fparse(comp_match $xx))
+	if (i == 3) {
+	    echo $s
+	    @:i = 0
+	    @:s = []
+	}
+    }
+    if (s) {
+	echo $s
+    }
+}
+
+### an easy way to maintain unique lists of stuff, used for
+### regular /msg tab stuff, and advanced comp, and behaves
+### specially depending on what hash it's working on
+alias a.completion.add_item {
+    if (![$1]) {
+	return
+    }
+
+    if (rmatch($1 $ac.config(comp_msg_ignore))) {
+	return
+    }
+
+    ### if the nick is already there (oo!)
+    if (findw($1 $($0))!=[-1]) {
+	@$(0) = [$1 $remw($1 $($0))]
+    } else {
+	### life is hard
+	if ([$0] == [a.completion.mtab.list]) {
+	    if (ac.config(comp_msg_array_size)) {
+		@:i = ac.config(comp_msg_array_size)-1
+		@$(0) = [$1 $leftw($i $($0))]
+	    } else {
+		@$(0) = [$1 $($0)]
+	    }
+	} else {
+	    @$(0) = [$1 $($0)]
+	}
+    }
+    if ([$0] == [a.completion.mtab.list]) {
+	@a.completion.mtab.time[$ac.encode($1)] = time()
+	@a.completion.mtab.index = 0
+    }
+}
+
+alias a.completion.del_item {
+    if (![$1]) {
+	return
+    }
+
+    ### torch the nick if it's there (this is the easy part)
+    @$(0) = remw($1 $($0))
+
+    if ([$0]==[a.completion.mtab.list]) {
+	^assign -a.completion.mtab.time[$ac.encode($1)]
+    }
+}
+
+alias a.completion.adv.word {
+    @:ci = before(- $0)-1
+    @:cw = after(- $0)
+    @:cmd = a.completion.find($1)
+    if (!cmd) {
+	if (!ci) {
+	    return $a.completion.complete(1 $1 $a.completion.cmd_list)
+	} else {
+	    return
+	}
+    }
+
+    @:lev = [a.completion.cmd\[$cmd\]]
+    @:i = 0
+    @:w = word(0 $2-)
+    while (w) {
+	if ([$($(lev)[sub][$ac.encode($w)][name])]) {
+	    @:lev #= [[sub][$ac.encode($w)]]
+	} else {
+	    break
+	}
+	if (ci == i) {
+	    break
+	}
+	@:i++
+	@:w = word($i $2-)
+    }
+    @:ci--
+    @:w = []
+    if (ci<i) {
+	return $cw
+    }
+    if ([$($(lev)[slist])]) {
+	if (cw) {
+	    @:w = a.completion.complete(0 $cw $($(lev)[slist]))
+	    if (w) {
+		return $w
+	    }
+	} else {
+	    return $($(lev)[slist])
+	}
+    }
+    if ([$($(lev)[fmt])]) {
+	if (word(${ci - i} $($(lev)[fmt]))) {
+	    return $word(${ci - i} $($(lev)[fmt]))
+	}
+	@:s = rightw(1 $($(lev)[fmt]))
+	if (right(1 $s)==[*]) {
+	    return $s
+	}
+    }
+    return %*	
+}
+
+alias a.completion.adv.pct {
+    @:t = after(% $0)
+    @:w = [$1]
+    @:sep = []
+    @:skip = []
+
+    ### if it's just a *, or a +, return
+    if (t == [*] || t == [+]) {
+	return
+    }
+
+    ### see if we have a separator
+    if (left(1 $t) == [\[]) {
+	@:t = after([ $t)
+	@:sep = left(1 $t)
+	@:t = after(] $t)
+    }
+
+    ### now walk through the arguments and build our list
+    fec ($t) c {
+	if (skip != []) {
+	    if (c == skip) {
+		@:skip = []
+	    }
+	    continue
+	}
+	switch ($ascii($c)) {
+	    ### (c): channels we are in
+	    (99) {
+		@push(:list $mychannels())
+	    }
+	    ### (C): channels we are in and favorite channels
+	    (67) {
+		@push(:list $mychannels() $comp_adv_clist)
+	    }
+	    ### (d): dcc stuff (this doesn't work all that well)
+	    (100) {
+		@push(:list $comp_adv_dlist)
+	    }
+	    ### (f): files, only globs with beginning of filename, sorry
+	    (102) {
+		@push(:list $glob(${w}*))
+		### we have to twiddle here, because glob does
+		@:w = twiddle($w)
+	    }
+	    ### (h): hosts in channels, this gets expensive!
+	    (104) {
+		fe ($mychannels()) xx {
+		    fe ($chanusers($xx)) yy {
+			@push(:list $after(-1 @ $userhost($yy)))
+		    }
+		}
+	    }
+	    ### (H): hosts in channels, and our hosts, even worse than h
+	    (72) {
+		fe ($mychannels()) xx {
+		    fe ($chanusers($xx)) yy {
+			@push(:list $after(-1 @ $userhost($yy)))
+		    }
+		}
+		@push(:list $comp_adv_hlist)
+	    }
+	    ### (m) messages (of any kind, including CTCP)
+	    (109) {
+		@push(:list $comp_adv_mlist)
+	    }
+	    ### (M) notices (inc. ctcp replies)
+	    (77) {
+		@push(:list $comp_adv_nlist)
+	    }
+	    ### (n) users in channels we are in
+	    (110) {
+		### walk through channels adding to list
+		fe ($mychannels()) xx {
+		    @push(:list $chanusers($xx))
+		}
+	    }
+	    ### (N) m+n combined
+	    (78) {
+		fe ($mychannels()) xx {
+		    @push(:list $chanusers($xx))
+		}
+		@push(:list $comp_adv_mlist $comp_adv_nlist)
+	    }
+	    ### (s) servers
+	    (115) {
+		@push(:list $a.network.get_list($a.network.get()))
+	    }
+	    ### (t) networks
+	    (116) {
+		 @push(:list $a.network.list)
+	    }
+	    ### (") handles quoted lists, and evaluates them too
+	    (34) {
+		### this is a sick way of getting the list,
+		### but it should work for just about
+		### anything people need to do...
+		@:s = after(\\" $before(-1 \\" $t))
+		@:skip = ["]
+
+		### this is a hack too..
+		@:i = 0
+		@:t = after(-1 \\" $t)
+		### now parse the list
+		@:s #= [,]
+		@:x = before(, $s)
+		@:s = after(, $s)
+		while (x) {
+		    @:list #= [$($x) ]
+		    @:x = before(, $s)
+		    @:s = after(, $s)
+		}
+	    }
+	    ### (') handles quoted lists, almost like the above, but
+	    ###     no expansion
+	    (39) {
+		@:s = after(' $before(-1 ' $t))
+		@:skip = [']
+
+		### same hack as above
+		@:i = 0
+		@:t = after(-1 ' $t)
+		### this list parse is about identical
+		@:s #= [,]
+		@:x = before(, $s)
+		@:s = after(, $s)
+		while (x) {
+		    @:list #= [$x ]
+		    @:x = before(, $s)
+		    @:s = after(, $s)
+		}
+	    }
+	    ### (,)
+	    (44) {
+		### nothing done here, just a placeholder
+	    }
+	}
+    }
+    if (w) {
+	if (sep) {
+	    @:s = before(-1 $sep $w)
+	    if (s) {
+		@:s #= [${sep}$a.completion.complete(1 $after(-1 $sep $w) $list)]
+	    } else {
+		@:s = a.completion.complete(1 $w $list)
+	    }
+	    return $s
+	} else {
+	    return $a.completion.complete(1 $w $list)
+	}
+    } else {
+	return $uniq($list)
+    }
+}
+
+alias a.completion.adv.unload {
+    fe ($aliasctl(assign pmatch a.completion.*)) xx {
+	//^assign -$xx
+    }
+    fe ($aliasctl(alias pmatch a.completion.*)) xx {
+	//^alias -$xx
+    }
+}
+
+alias cmpctl {
+    if (![$0]) {
+	@usage(cmpctl)
+	return
+    }
+
+    @:t = after(- $0)
+    switch ($t) {
+	(c) {
+	    @:a = [channel]
+	}
+	(h) {
+	    @:a = [host]
+	}
+	(*) {
+	    @usage(cmpctl)
+	    return
+	}
+    }
+    if ([$1]) {
+	fe ($1-) xx {
+	    if (left(1 $xx) == [-]) {
+		@comp_adv_$(t)list = remw($after(- $xx) ${comp_adv_$(t)list})
+		aecho removed $xx from user $a list
+	    } else {
+		@comp_adv_$(t)list #= [$xx ]
+		aecho added $xx to user $a list
+	    }
+	}
+    } else {
+	aecho user $a list:
+	@:i = 0
+	@:s = []
+	fe ($(comp_adv_$(t)list)) xx {
+	    @:i++
+	    @:s #= [$fparse(comp_match $xx) ]
+	    if (i == 3) {
+		echo $s
+		@:i = 0
+		@:s = []
+	    }
+	}
+	if (s) {
+	    echo $s
+	}
+    }
+}
+
+alias a.completion.adv.savelists {
+    if (comp_adv_clist == [] && comp_adv_hlist == []) {
+	### don't save if they have no data
+	return
+    }
+    @:fd = a.save.open($apath/etc/completion.lists user completion lists)
+    if (fd < 0) {
+	return
+    }
+    @write($fd ^assign comp_adv_clist $comp_adv_clist)
+    @write($fd ^assign comp_adv_hlist $comp_adv_hlist)
+    @close($fd)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

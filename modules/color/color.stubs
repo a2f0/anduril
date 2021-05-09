@@ -1,0 +1,103 @@
+### $Id: color.stubs,v 1.6 2001/11/03 10:25:51 wd Exp $
+ac.package color
+
+alias a.color.mkblocks {
+    return $cparse("$0лл $1лл $2лл  $3лл $4лл $5лл")
+}
+
+alias a.color.color_list {
+    a.list.start n 0 possible color settings
+    a.list.hdr no hi dk  no hi dk
+
+    for (@:i = 0, i < formats[color][formats][count], @:i++) {
+	a.list.add $a.color.mkblocks($formats[color][formats][$i])
+    }
+    a.list.end
+}
+
+alias a.color.color_set {
+    @:c = format_color
+
+    @col = col1 = cparse(%N$word(0 $c))
+    @hcol = hcol1 = cparse(%N$word(1 $c))
+    @dcol = dcol1 = cparse(%N$word(2 $c))
+    @col2 = cparse(%N$word(3 $c))
+    @hcol2 = cparse(%N$word(4 $c))
+    @dcol2 = cparse(%N$word(5 $c))
+}
+
+alias a.color.color_display {
+    echo $a.color.mkblocks($format_color)
+}
+
+alias color (setting, cmd, format, args) {
+    if (cmd != []) {
+	if (args == [] || cmd != [format]) {
+	    @usage(color)
+	    return
+	}
+
+	@:s = formats[color][formats][${setting - 1}]
+	if (s == []) {
+	    aerrecho no such color setting $setting
+	    return
+	}
+
+	@:f = ac.format.find($format)
+
+	if (f == []) {
+	    aerrecho no such format $formats
+	    return
+	} elsif (#f > 1) {
+	    fe ($f) xx {
+		color $setting format $xx $args
+	    }
+	}
+
+	@:i = args - 1
+	if (i >= formats[$f][formats][count]) {
+	    aerrecho index for format $f too high. max: $formats[$f][formats][count]
+	    return
+	}
+	### call the format command, first
+	format $f $args
+
+	### set local versions of these :)
+	@:ncol = ::ncol
+	@:col = :col1 = cparse(%N$word(0 $s))
+	@:hcol = :hcol1 = cparse(%N$word(1 $s))
+	@:dcol = :dcol1 = cparse(%N$word(2 $s))
+	@:col2 = cparse(%N$word(3 $s))
+	@:hcol2 = cparse(%N$word(4 $s))
+	@:dcol2 = cparse(%N$word(5 $s))
+
+	fe ($f $formats[$f][slaves]) ff {
+	    ### got a format, do search and replace.
+	    @:n = [$(format_$ff)]
+
+	    ### this is irritating.  we have to sar on a lot of stuff, not to
+	    ### mention that [hd]col == [hd]col1.  sux.
+	    fe (ncol dcol dcol1 col col1 hcol hcol1 hcol2 dcol2 col2 hcol2) xx {
+		@:pat = [$$\($xx\)]
+		@:rep = [$($xx)]
+		@sar(rg/$pat/$rep/:n)
+	    }
+	    ^assign format_$ff $n
+	}
+
+	if (formats[$f][set_command]) {
+	    $(formats[$f][set_command]) $i
+	}
+	    
+	return
+    }
+
+    if (setting != []) {
+	format color $setting
+	return
+    } else {
+	flist color
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

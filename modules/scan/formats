@@ -1,0 +1,5 @@
+# formats for type scan
+ac.format.add                 scan $(col1)@nick@
+ac.format.add                 scan $(col1)$msar(/@/$(hcol2)@$(col1)/+/$(col2)+$(col1)/@nick@)
+# ---
+

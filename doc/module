@@ -1,0 +1,127 @@
+------------------------------------------------------------------------------ 
+$Id: module,v 1.5 2002/06/18 00:06:46 wd Exp $
+------------------------------------------------------------------------------
+
+Modules are loaded from individual directories in the modules directory,
+which have a structure similar to the following:
+
+modules/<mod>/<mod>.am
+modules/<mod>/formats
+
+(the last is optional, and is dependant on you having formats)
+
+Modules are a hybrid of ircII script and anduril parsing, all aliases should
+be written to be ircII-style, obviously.  But each module has a set of
+specific requirements from anduril, they are as follows:
+
+All modules must be "documented" in a specific manner, using various
+keywords which the script understands.  All keywords must be preceeded by :,
+and are shown that way to avoid confusion,  There must NOT be whitespace
+between the : and the keyword, other whitespace requirements are documented
+for each keyword.
+
+:new mod[ule] <name> [version] [description]
+ - Each module name must be exactly one word
+ - The version information must be one word
+ - The description may be of any length/format
+
+:mod[ule] <name> version <version>
+ - This is identical to providing the version item with the module keyword
+
+:mod[ule] <name> desc <description>
+ - This is identical to providing the description item with the module
+   keyword
+
+:mod[ule] <name> author <email> <nick> [name]
+ - This isn't required, it's nice to have for your own personal glory though
+ - email and nick are each one word, name is any length, and would
+   canonically be your actual name.
+
+:mod[ule] <name> depend [module1 module2 ...]
+ - This provides a list of dependancies for your module, if it has none,
+   just leave the field empty
+
+:mod[ule] <name> unload_cmd <command name>
+ - This is optional, and provides a command that can be called to do any
+   necessary tasks when a module is unloaded (by the user or the script)
+   NB: modules are not considered to be unloaded during an /exit
+   
+:mod[ule] <name> save_cmd <command name>
+ - this is optional, and behaves similarly to the unload_cmd above, but
+   is called not only when a module is unloaded (as settings are saved
+   when this happens), but also when the script exits, and any other
+   time all settings are saved.
+
+:mod[ule] <name> meta <tag> <data...>
+ - this is optional, and basically allows you to assign any sort of data
+   you like to the module's data area.  this is a good way to provide data
+   for modules that may or may not be present at load-time, but which might
+   wish to make use of the data.  all metadata of a certain tag type must be
+   specified on one line, no appending is done.
+
+All of the above should be specified only ONCE in a module.
+
+The rest can be specified multiple times, and center pretty much on commands,
+but must still be in the #:module block.
+
+:comm[and] <name> new [syntax]
+ - commandname is the name of the alias, one word obviously
+ - syntax is the syntax for the command, any length will do
+ - keyword parsing for this command ends with the :!command keyword, (see
+   below)
+
+:comm[and] <name> syntax <syntax>
+ - same as specifying syntax for command above
+
+:comm[and] <name> desc <brief description of command>
+ - provides a brief description of the command, for /usage
+
+:comm[and] <name> aliases <list of command aliases>
+ - provides a list of aliases for the command
+ - NB: anduril adds the aliases for you automatically with this line, you do
+       not need to add them yourself...of course you CAN if you like, but
+       that would be silly...
+
+:comm[and] <name> help <text>
+ - Add longish amounts of detailed help for commands.  To add multiple lines
+   of data I suggest doing:
+
+:comm <command> help this is a lot of help for a command to have, this is \
+in fact so much help that it has to be spread out onto several lines. on \
+the other hand it is good for users to have this much help!
+
+   Special formatting: if you want your text specially formatted, you can
+   use any of the following identifiers, separated on both sides by white-
+   space to do so.  If more are requested, more will probably be added.  These
+   are specific to the help module bundled with anduril, if you roll your own
+   or use someone else's, these may not necessarily work.
+   - %n: add a newline immediately
+   - %t: insert a tab.  NB: the parser cannot take responsibility for how
+     the tab will affect the length of the screen, it would be a good idea
+     not to write things with tabs in them that will exceed the length of
+     somebody's screen, possibly (i.e. keep stuff under about 70 chars WITH
+     tabs)
+   
+
+:comm[and] <name> flags <flags>
+ - this sets certain internal flags about the command, it works like a mode
+   string, they are as follows:
+   @ - requires ops on current channel to use
+   i - "important" command, this means the command is listed not only
+       in help for the module, but in help for the script overall.
+       Please only use this for stuff that really is important
+   o - IRC operator only command
+
+:comm[and] <name> xref <args>
+ - This creates a cross-reference field which can be used by various commands
+   to determine how things might relate to each other.  For instance:
+   :comm foo xref comm:bar conf:baz form:flurf form:zap
+   would add cross-references to the 'bar' command, the 'baz' config, and the
+   'flurf' and 'zap' formats.  This is mostly useful in conjunction with help
+   browsers.
+
+NB: There are other things you can do with modules (specifically adding
+formats and configs) see the 'config' and 'format' files also in this
+directory
+
+

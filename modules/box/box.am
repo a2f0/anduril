@@ -1,0 +1,68 @@
+### $Id: box.am,v 1.14 2001/11/03 10:25:50 wd Exp $
+
+:new module box
+:mod box version 29
+:mod box desc simple wrapper to display text boxes
+:mod box author wd@anduril.org White_Dragon Chip Norkus
+
+:new format box a simple text box
+:form box flags i
+:form box slaves box_header box_side box_footer box_bottom 
+
+:new format box_header a text box with a header
+:form box_header arguments	@header@
+:form box_header flags %
+
+:new format box_side side of a simple text box
+:form box_side arguments @data@
+:form box_side flags %
+
+:new format box_footer bottom of a text box with a header and footer
+:form box_footer arguments	@footer@
+:form box_footer flags %
+
+:new format box_bottom bottom of a simple text box
+:form box_bottom arguments	@data@
+:form box_bottom flags %
+
+@a.box.echo = [echo]
+alias a.box.echocmd (cmd) {
+	@a.box.echo = cmd
+}
+
+alias a.box.start (header) {
+	@:f = []
+	if (header != []) {
+		@:f = fparse(box_header $header)
+	} else {
+		@:f = fparse(box)
+	}
+
+	if (f != []) {
+		$(a.box.echo) $f
+	}
+	stack push set continued_line
+	//^set continued_line $fparse(box_side)
+}
+
+
+alias a.box.echo (data) {
+	$(a.box.echo) $fparse(box_side $data)
+}
+
+alias a.box.end (footer) {
+	@:f = []
+	stack pop set continued_line
+	if (footer != []) {
+		@:f = fparse(box_footer $footer)
+	} else {
+		@:f = fparse(box_bottom)
+	}
+
+	if (f != []) {
+		$(a.box.echo) $f
+	}
+	@a.box.echo = [echo]
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

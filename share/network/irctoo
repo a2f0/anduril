@@ -1,0 +1,11 @@
+# Automatically generated network definition for irctoo
+
+alias a.network.is_irctoo {
+	if (match(*.irctoo.net $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps irctoo hlmotsw d 30 6 d

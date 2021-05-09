@@ -1,0 +1,146 @@
+### $Id: words.stubs,v 1.6 2002/02/28 20:05:19 wd Exp $
+ac.package words
+
+alias banword (net, chan, word) {
+    if (word != []) {
+	if (left(1 $word) == [-]) {
+	    @a.words.ban.remove($net $chan $rest(1 $word))
+	} else {
+	    @a.words.ban.add($net $chan $word)
+	}
+	return
+    }
+
+    @a.words.ban.list($net $chan)
+}
+
+alias a.words.ban.add (net, chan, word) {
+    if (findw($word $a.words.ban[$ac.encode($net $chan)]) == -1) {
+	@push(a.words.ban[$ac.encode($net $chan)] $word)
+	aecho banned use of $word on $chan \($net\)
+    } else {
+	aerrecho use of $word is already banned on $chan \($net\)
+    }
+}
+
+alias a.words.ban.remove (net, chan, word) {
+    if (findw($word $a.words.ban[$ac.encode($net $chan)]) == -1) {
+	aerrecho $word is not banned on $chan \($net\)
+    } else {
+	@a.words.ban[$ac.encode($net $chan)] = \
+	    remw($word $a.words.ban[$ac.encode($net $chan)])
+	aecho removed ban for word $word on $chan \($net\)
+    }
+}
+
+alias a.words.ban.list (net, chan) {
+    if (chan == []) {
+	@:chan = [*]
+    }
+    if (net == []) {
+	@:net = [*]
+    }
+
+    a.list.start u 3 word bans for $chan \($net\)
+    a.list.hdr network
+    a.list.hdr channel
+    a.list.hdr words
+    for xx in ($aliasctl(assign match a.words.ban.)) {
+	@:n = word(0 $decode($after(-1 . $xx)))
+	@:c = word(1 $decode($after(-1 . $xx)))
+
+	if (match($net $n) && match($chan $c)) {
+	    a.list.add $n
+	    a.list.add $c
+	    a.list.add $($xx)
+	}
+    }
+    a.list.end
+}
+
+alias hiword (net, chan, word) {
+    if (word != []) {
+	if (left(1 $word) == [-]) {
+	    @a.words.hi.remove($net $chan $rest(1 $word))
+	} else {
+	    @a.words.hi.add($net $chan $word)
+	}
+	return
+    }
+
+    @a.words.hi.list($net $chan)
+}
+
+alias a.words.hi.add (net, chan, word) {
+    if (findw($word $a.words.hi[$ac.encode($net $chan)]) == -1) {
+	@push(a.words.hi[$ac.encode($net $chan)] $word)
+	aecho now highlighting $word on $chan \($net\)
+    } else {
+	aerrecho $word is already highlighting on $chan \($net\)
+    }
+}
+
+alias a.words.hi.remove (net, chan, word) {
+    if (findw($word $a.words.hi[$ac.encode($net $chan)]) == -1) {
+	aerrecho $word is not highlighting on $chan \($net\)
+    } else {
+	@a.words.hi[$ac.encode($net $chan)] = \
+	    remw($word $a.words.hi[$ac.encode($net $chan)])
+	aecho removed highlighting for word $word on $chan \($net\)
+    }
+}
+
+alias a.words.hi.list (net, chan) {
+    if (chan == []) {
+	@:chan = [*]
+    }
+    if (net == []) {
+	@:net = [*]
+    }
+
+    a.list.start u 3 word highlights for $chan \($net\)
+    a.list.hdr network
+    a.list.hdr channel
+    a.list.hdr words
+    for xx in ($aliasctl(assign match a.words.hi.)) {
+	@:n = word(0 $decode($after(-1 . $xx)))
+	@:c = word(1 $decode($after(-1 . $xx)))
+
+	if (match($net $n) && match($chan $c)) {
+	    a.list.add $n
+	    a.list.add $c
+	    a.list.add $($xx)
+	}
+    }
+    a.list.end
+}
+
+alias a.words.save {
+    ### banned words first
+    @:vars = aliasctl(assign match a.words.ban.)
+    if (vars != []) {
+	@:fd = a.save.open($apath/etc/words.banned banned words)
+	if (fd < 0) {
+	    return
+	}
+	fe ($vars) xx {
+	    @write($fd ^assign $xx $($xx))
+	}
+	@close($fd)
+    }
+    
+    ### now highlighted words
+    @:vars = aliasctl(assign match a.words.hi.)
+    if (vars != []) {
+	@:fd = a.save.open($apath/etc/words.hi highlighted words)
+	if (fd < 0) {
+	    return
+	}
+	fe ($vars) xx {
+	    @write($fd ^assign $xx $($xx))
+	}
+	@close($fd)
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

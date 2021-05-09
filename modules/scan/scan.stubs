@@ -1,0 +1,203 @@
+### $Id: scan.stubs,v 1.10 2001/11/10 08:56:22 wd Exp $
+ac.package scan
+
+alias names a.scan.names * $*
+alias nameso a.scan.names o $*
+alias namesv a.scan.names v $*
+alias namesn a.scan.names n $*
+alias namesf a.scan.names f $*
+
+alias a.scan.names (type, flags, chan) {
+    @:verbose = 0
+
+    switch ($flags) {
+	(-all) {
+	    //names
+	    return
+	}
+	(-v) {
+	    @:verbose = 1
+	    if (chan == []) {
+		@:chan = builtin_expando(C)
+	    }
+	    if (chan == []) {
+		aerrecho no current channel!
+		return
+	    }
+	}
+	(*) {
+	    @:chan = flags
+	}
+    }
+
+    if (chan == []) {
+	@:chan = builtin_expando(C)
+    }
+    if (chan == []) {
+	aerrecho no current channel!
+	return
+    }
+
+    if (findw($chan $mychannels()) == -1) {
+	//names $chan
+	return
+    }
+    a.scan $verbose $type $chan $channel($chan)
+}
+
+alias a.scan (verbose, type, chan, users) {
+    ### special handling for independant types
+    switch ($type) {
+	(o) {
+	    @:list = strip(.? $pattern(@* $users))
+	    @:hdr = [$chan \(ops: $#list\)]
+	    @:ftr = []
+	    if (list == []) {
+		aerrecho no ops in $chan
+		return
+	    }
+	}
+	(v) {
+	    @:list = strip(.? $pattern(.+* $users))
+	    @:hdr = [$chan \(voices: $#list\)]
+	    @:ftr = []
+	    if (list == []) {
+		aerrecho no voices in $chan
+		return
+	    }
+	}
+	(n) {
+	    @:list = filter(@* $filter(+* $strip(.? $users)))
+	    @:hdr = [$chan \(regular users: $#list\)]
+	    @:ftr = []
+	    if (list == []) {
+		aerrecho no regular users in $chan
+		return
+	    }
+	}
+	(f) {
+	    @:list = strip(.? $users)
+
+	    @:flist = []
+	    fe ($list) xx {
+		@:acc = a.userlist.find(- $userhost($strip(@+ $xx)) $chan)
+		if (acc != [-]) {
+		    @push(:flist $xx)
+		}
+	    }
+	    @:list = flist
+	    @:hdr = [$chan \(friends: $#list\)]
+	    @:ftr = []
+	}
+	(*) {
+	    if (ac.config(scan_sort_list)) {		
+		### create a sorted nick list
+		@:list = sort($sar(g/@/#/$strip(.? $users)))
+		@:list = sar(g/#/@/$list)
+	    } else {
+		@:list = strip(.? $users)
+	    }
+	    @:hdr = [$chan \(members: $#list\)]
+	    @:nonops = numwords($filter(@* $list))
+	    @:ftr=[ops: ${numwords($list) - nonops} nonops: $nonops]
+	    if (maxlen($list) > ac.config(scan_longest_nick)) {
+		### suck, fix the length
+		@:i = ac.config(scan_longest_nick)
+		fe ($list) xx {
+		    @:newlist #= [$[$i]xx ]
+		}
+		@:list = newlist
+	    }
+	}
+    }
+
+    if (verbose) {
+	a.list.start u 2 $hdr
+	a.list.hdr user
+	a.list.hdr access
+	@:list = sort($list)
+	fe ($list) xx {
+	    @:acc = a.userlist.find(- $userhost($strip(@+ $xx)) $chan)
+	    if (pass(@+ $xx) == []) {
+		@:space = [ ]
+	    } else {
+		@:space = []
+	    }
+	    if (acc != [-]) {
+		a.list.add $space$(hcol1)$msar(/@/$(dcol1)@$(hcol1)/+/$(dcol1)+$(hcol1)/$xx)$(dcol1)!$(ncol)$sar(/@/$(dcol1)@$(ncol)/$userhost($strip(@+ $xx)))
+	    } else {
+		a.list.add $space$(col1)$msar(/@/$(dcol1)@$(col1)/+/$(dcol1)+$(col1)/$xx)$(dcol1)!$(ncol)$sar(/@/$(dcol1)@$(ncol)/$userhost($strip(@+ $xx)))
+		@:acc = []
+	    }
+	    a.list.add $word(0 $acc)
+	}
+	a.list.end $ftr
+    } else {
+	a.list.start u 0 $hdr
+	if (chanwin($chan) != -1) {
+	    a.list.window $chanwin($chan)
+	}
+	@:nlen=maxlen($n)
+	if (nlen>ac.config(scan_longest_nick)) {
+	    @:nlen=ac.config(scan_longest_nick)
+	}
+	fe ($list) xx {
+	    a.list.add $fparse(scan $[$nlen]xx)
+	}
+	a.list.end $ftr
+    }
+}
+
+alias clones (flags, args) {
+    @:host = 1
+    @:user = 0
+    @:c = builtin_expando(C)
+    if (left(1 $flags) == [-]) {
+	@:host = index(h $flags) > 0 ? 1 : 0
+	@:user = index(u $flags) > 0 ? 1 : 0
+	if (args) {
+	    @:c = word(0 $args)
+	}
+    } elsif (flags != []) {
+	@:c = flags
+    }
+		
+    if (findw($c $mychannels()) == -1) {
+	aerrecho you are not on channel $c
+	return
+    }
+
+    fe ($chanusers($c)) xx {
+	@push(:nicks $xx)
+	if (user && host) {
+	    @push(:addrs $userhost($xx))
+	} elsif (user) {
+	    @push(:addrs $before(@ $userhost($xx)))
+	} else {
+	    @push(:addrs $after(@ $userhost($xx)))
+	}
+    }
+
+    a.box.start clones on channel $c
+    while (nicks != []) {
+	@:addr = word(0 $addrs)
+	@:clones = []
+	for (@:i = 0, i < numwords($nicks), @:i++) {
+	    if (word($i $addrs) == addr) {
+		@:n = word($i $nicks)
+		@push(:clones $n)
+	    }
+	}
+	if (numwords($clones) > 1) {
+	    a.box.echo $numwords($clones) clones from $addr:
+	    a.box.echo $clones
+	}
+	fe ($clones) xx {
+	    @:nicks = remw($xx $nicks)
+	    @:addrs = remw($addr $addrs)
+	}
+    }
+    a.box.end
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

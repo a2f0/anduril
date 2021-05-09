@@ -1,0 +1,22 @@
+# formats for type away and slaves away_idle back
+ac.format.add                 away [away\(l/@log@ p/@pager@)]: @msg@
+ac.format.add            away_idle idle-away \(@time@ minutes)
+ac.format.add                 back [back\($tdiff3(@gonefor@))]: @msg@
+
+ac.format.add                 away [away\(l/@log@ p/@pager@)]: @msg@
+ac.format.add            away_idle idle-away \(@time@ minutes)
+ac.format.add                 back [back\($tdiff3(@gonefor@))]: @msg@
+
+ac.format.add                 away away!log@log@!page@pager@: @msg@
+ac.format.add            away_idle idleaway!@time@m
+ac.format.add                 back back!$tdiff3(@gonefor@): @msg@
+
+ac.format.add                 away & @msg@ \(${[@log@] == [on] ? [l] : []}${[@pager@] == [on] ? [p] : []})
+ac.format.add            away_idle idle: @time@m
+ac.format.add                 back fg @msg@ \(gone $tdiff3(@gonefor@))
+
+ac.format.add                 away away: @msg@ \(${[@log@] == [on] ? [l] : []}${[@pager@] == [on] ? [p] : []})
+ac.format.add            away_idle idleaway: @time@
+ac.format.add                 back back: @msg@ \(gone $tdiff4(@gonefor@))
+# ---
+

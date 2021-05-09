@@ -1,0 +1,407 @@
+------------------------------------------------------------------------------
+$Id: CHANGES,v 1.84 2004/03/03 10:10:31 wd Exp $
+------------------------------------------------------------------------------
+
+Changes in 1.2b6:
+
+o Added a keybinding for mesgview (alt+m or esc+m) and made mesgview and
+  operview hiding work right.
+
+o The network code will use the NETWORK value from the 005 numeric
+
+o Make server-specific feature files (share/server/*) a bit more 'modular'
+  (i.e. keep them from duplicating so much code)
+
+o Added autowin module by erik.
+
+o Added a 'current_topic' format.  I don't know why I didn't just do this
+  before.  It is a slave of the 'topic' format but has a slightly different
+  look (as it should.  duh.  inspired by entropy)
+
+o Hopefully fixed a weird bug with the window module unsetting the wrong
+  aliases.
+
+o Added xterm_title config and format pair in the status module.
+
+o I finally did it!  A new userlist module has been written.  It is, FOR THE
+  PRESENT userlist2.  I'd like for people who need userlist stuffs to play
+  with it and make sure it works so all the bugs can be ironed out.  At some
+  point it WILL OVERWRITE the original userlist module!
+
+o Added 'ignore_away_replies' config to the msg module to ignore repeated
+  away replies.
+
+o Added /identify command to bahamut.  (erik)
+
+o Added handling for Undernet numeric 330 (RPL_WHOISLOGGEDINAS or some such
+  nonsense)
+
+o Added a telnet module (courtesy of erik)
+
+o Added a 'dcc_autoget' config to the dcc module (courtesy of erik)
+
+o Added /wn and /wp aliases suggested by dan@EFnet
+
+o The window module now binds alt-1+alt-1 to move to window 11, etc, and
+  creates new bindings as new windows are created (only works with epic
+  1.1.7+)
+
+o /banstat now numbers bans, and those numbers can be used by the /unban
+  command.
+
+o /map now works.  You can /map from any point on the network.  Thanks to
+  Liandrim for some helpful pointers.
+
+o /links code massively rewritten.  /links output should be a lot more
+  sensical and easy to parse now.
+
+o Added /ovwall, /vwall to the standard /wall set.
+
+o Added a /wq command for querying folks. (sergio)
+
+o Added an 'xmms_auto_echo' config, which may be toggled to keep the xmms
+  module from automatically outputting the currently playing mp3. (sergio)
+
+o The /timestamp command now assumes + if it isn't specified. (sergio)
+
+o The oper_modes config is now a string, to allow for long-form undernet
+  modes. (sergio)
+
+o The network code now uses server groups for speed whenever possible.
+
+Changes in 1.2b5:
+
+o Added /links -t.  This displays the links list as a table with each hub
+  as a column.  In general, you'll want a wide screen to view this as it
+  can get very horizontally long.  Thanks to adm for the cool idea.
+
+o Rewrote timestamping.  It's now handled significantly differently.  All of
+  your ts_* configs have basically been obsoleted.  You can now manage
+  timestamps with the 'timestamp' config (and command).  I will try, as I move
+  along, to provide ways to timestamp just about everything.  Along with the
+  stuff previously supported, I've added support for a few new values:
+  - banner: all regular banners are replaced by timestamps
+  - server: all data sent through the server-echo alias is timestamped
+
+  Currently, the defaults for timestamping are 'away' and 'log'.  It is (for
+  the time being) necessary to specify each type in the config, so I recommend
+  that you use the /timestamp (/ts) command to manage things.  In the future I
+  may provide some meta-types to wrap this sort of thing (especially 'all').
+
+o Added a 'meta' tag for modules.  Timestamping now uses this.
+
+o Added 'msg_shorten_host' config.  See /ahelp. :)
+
+o Added findk command. This command checks stats K for a given mask. It also
+  allows you to remove the kline with -remove. Taken from adm/odelay -tbaur
+
+o Added kline support for hybrid - tbaur
+
+o Added the mail module, as suggested by joey@EFnet.
+
+o Added /ctcp SOURCE reply in the version module as suggested by a bundle
+  of folks.
+
+o Added a hiword_away_log config.  /ahelp conf hiword_away_log as usual. :)
+
+o /readlog (away) won't be automatically run if you have no messages.  This
+  may leave garbage files.  I'll see about better cleaning for this later.
+
+o Added server support for hybrid. There is now a combined support file for
+  both bahamut and hybrid since much of the formating is similar. Added
+  support for numerous things, client connect/disconnect, stats/links/motd
+  and gline formating for hybrid. Client related are defined by "client" and
+  the others as "notice" for sfilter support -tbaur
+
+o Fixed kline aliases, not as generic now. Will accept "/kline nick message"
+  instead of "/kline nick :message" and added various other aliases.
+	/kline, /unkline, /pkline (defaults to perm /kline), /tkline (allows
+	you to define the time (/kline 30 ...), /dline, /undline, /zline,
+	and /gline -tbaur
+
+o Added support for dalnet operserv2, /os2+formatting -tbaur
+
+o Fixed color on the last two brackets of akill formatting -tbaur
+
+o Finally fixed some /links stuff.  Also on EFnet (and other similarly named
+  networks) we don't try to chop the names up anymore.  Shrug.
+
+o /ctcp <foo> ping now sends a proper ping request, instead of nothing (raven)
+
+o With sfilter rules, a filtered message can now be logged with an explicit
+  'log' statement in that rule. (tbaur)
+
+o Fixed /conf cloak.  It now takes numbers as well as a list of specific
+  types of ctcp to block.  See /ahelp conf cloak. (tbaur)
+
+o Another logging tweak.  Log directories are now separated by date-of-archival
+  in the tarfile. (tbaur)
+
+o More logging tweaks.  log_archive_compress is more fault tolerant, and
+  strange channel names shouldn't cause breakage (tbaur)
+
+o /flist for format display is now unnumbered to fix an intuitiveness issue
+  (zphinx)
+
+o Fixed the timestamp format breakage (tbaur/eve)
+
+o Made a cleaner default format for /whois (tbaur)
+
+o Fixed a bug causing an infinite loop using /sfilter (skill)
+
+o Fixed a bug in /wall caused by new semantics for /msg and /notice builtin
+  commands (Zukee)
+
+o Made the things which use sfilters a little less.. sensitive to the server
+  module coming and going.
+
+Changes in 1.2b4:
+
+o Fixed a bug that was created by the log archiver rotating files, causing the
+  away logger to break unmercifully (awyeah).
+
+o Moved the 'kill' format and other things to the server module.  The server
+  module is now a little more specific about things which it outputs thanks to
+  the 'banner_mod' format (also new).  It will now output a single letter
+  which describes (roughly) what the server module feels is relevant.  It's
+  intuitive, just keep an eye on it.
+
+o Added the /sfilter command.  IRC OPERATORS PAY ATTENTION.  A lot of the oper
+  stuff has completely changed around and you'll need to read up on the 
+  /sfilter command.  This should allow to configure things *exactly* the way
+  you want them, though.  Enjoy!  With /sfilter some things are going away,
+  like the wallops_window config and the /akillwin command.  These are being
+  replaced by more robust systems.
+
+o Added log archiving.  USE THIS AT YOUR OWN RISK.  I do not gaurantee the
+  sanctity of your files right now, *especially* if you use multiple clients
+  simultaneously!  I have tried to avoid trouncing stuff, but I just can't make
+  those gaurantees!  If you're curious, /conf log_arch* and have a look.
+
+o Fixed a tiny bug in /stats ?
+
+o Fixed a bug with overlapping descriptors in the logger. (justin)
+
+o Fixed fd-leak problems in the ignore and userlist modules caused by either
+  not, or improperly, closing file descriptors for savefiles.  Yuck.  (john)
+
+o Made the save module do more important things, like assist in saving file
+  settings for everything.  This much simplifies my life, several modules
+  will be changed ever-so-slightly to reflect this.
+
+o Made some light changes to several modules, mostly bugfixes and behavior
+  corrections of little import.
+
+o Added an 'autojoin' config to the autojoin module which, if turned off,
+  prevents the client from automatically joining channels at server connect
+  time.  Also added '/autojoin *' to join all autojoin channels on the current
+  network.
+
+o Made a small fix which will hopefully prevent /update from knocking peoples'
+  clients over in certain circumstances.  Thanks to hop for hunting this bug
+  down.
+
+o There is now a 'words' module which will do highlight/banned word detection
+  in channel public messages/actions.
+
+o Hopefully made the last few necessary changes to /who.  You can now do
+  /who -f to flush the queue.  Also, fixed a small buggle in the behavior.
+
+o Made /tbk work a bit better.  Also added a 'default_ban_time' config for
+  use with all bans to make them all timed.  By default it is '0', meaning
+  everything still works the same.
+
+o Fixed some unintelligent uses of script-wrapped /who in various places.
+
+o Added an autoop_delay config for wf to allow a static delay, or to allow
+  for no delay.
+
+o Made /who do the right thing on DALnet or Undernet (that is, automatically
+  use -dx or -ux if they are supported).  This adds a new network cap and a new
+  question in the /newnetwork command.  (brandy)
+
+o Changed the builder to get all the relevant version data for modules,
+  including share files.  This will result in a potentially monumental leap
+  in version for a few modules with many sharefiles, but will make /update
+  get new modules if their share files have been updated (which means skins,
+  completion, et al will benefit from a re-build in terms of /update)
+
+o Fixed a weird bug in the protection in the userlist module.  If someone
+  is deopped by an entity outside the channel, no protection (re-oping)
+  is done.
+
+o Fixed some silly bugs in the xdcc module I introduced earlier.
+
+o Added a -v flag to /lsmod to list module descriptions along with their
+  loaded/unloaded status.  (james)
+
+o Fixed autoload_oper so that the oper module isn't considered user-loaded
+  if it is loaded at all. (raven, kinda)
+
+o Fixed an obnoxious bug with /wnc and channel names without #s. (raven)
+
+o Fixed a bug related to the logging module creating directories (bodge)
+
+o Fixed a weird bug with deoping people and /scann-ing (note two ns) them.
+  (Mourgos)
+
+o Small fix to /tbk to make it "do the right thing."
+
+o Light changes to autojoin to make it more multi-server friendly (patch
+  courtesy of james)
+
+o Added a small fix for /banstat to show the setter of bans at all times
+  (Mourgos)
+
+o You can now do: /color <x> format <y> <z> to set format y to z (i.e. /format
+  y z) with the colors for 'x' made static.  This means that if you do, for
+  instance:  /color 30 format status 3 then until you change the format for
+  status again, those colors (red and blue in this case) will be static in the
+  status bar, whether you change the generic colors with /color or not.  You
+  can also do: /format y z color x.
+
+o Made /sv targettable.  Why hadn't I done this before?  Who knows. (whitefang)
+
+o Some cosmetic changes.  More formats now use their own display commands
+  to look nice and stuff.
+
+o More fixes to logging (got rid of that nasty exec :) (hop/john)
+
+o Another fix to network code.  Oi.  (drac)
+
+o Hopefully fixed quite a severe potential problem wiith logging not releasing
+  fds across reconnects/join+parts/etc.. (john)
+
+o /conf user_mode in the server module will now set a default usermode of
+  whatever you set it to when connecting to a server.
+
+Changes in 1.2b3:
+
+o There is now cross-reference data for items which can be indexed with /help.
+  At present very few things are cross-referenced, however for an example you
+  can look at /ahelp man.  There are no checks on the validity of cross-refs.
+
+o /finfo, /cfinfo, and /minfo are all gone, having been replaced by a much more
+  comprehensive /help command.  /help is now more informative and useful as
+  well.
+
+o You can now create a window to receive messages with via the /mesgview
+  command.  See also the 'mesgview_hidden', 'mesgview_size', and
+  'mesgview_auto' settings.  You may want to /conf mesgview_auto on if you
+  always want a message window.
+
+o the 'operview_status' format is now called 'other_status' and can be used
+  by anything which wants a single-line status titling the window (see above
+  change)
+
+o Fixed a small bug in the completion system involving %"" and %'' type lists.
+
+o Took an axe to a lot of old variable names.  Specifically, a.<type>_list
+  variables no longer exist!
+
+o Doing a /modules will now refresh the listing of available modules that is
+  stored by the modules module (how many more times can I say module today? :)
+  (maloy)
+
+o Hacked up the skins module a bit for sanity.  Now /ssave will try to preserve
+  the author/description if the skin existed before.  This makes it easier for
+  me to fix skins to go along with format changes.
+
+o Added a -f flag to /update to force module downloads.
+
+o Fixed 'removed time autokill' notice for the 14325235th time (brandy)
+
+o Made /update grab updates for unloaded modules, too, as well as this file.
+
+o Fixed a small bug in /format when looking at the format for something with
+  an abbreviated name. (e.g. /format joi now does the right thing)
+
+o /mop,mvoice,mdop,mdvoice all act a bit more sane (e.g. don't perform actions
+  on people when it is unnecessary.) (john).
+
+o Fixed two bugs in completion: people changing nicks will now be reflected in
+  the tab-completer (jonas).  Also, /conf comp_msg_expire now behaves
+  correctly.
+
+o Fixed the scan-on-join broken-ness in some instances of joining. (several
+  folks)
+
+o Fixed /killclones (I hope)  (jonas).
+
+o Fixed a screw-up on my part in gathering /stats data.
+
+o Fixed several small bugs (updater, status, server, others)
+
+o Added a handler for /stats ? on hybrid-type servers. (many people who
+  wouldn't shut up about it ;)
+
+Changes in 1.2b2:
+
+o Fixed a bit of /join mismanagement courtesy of hop.
+
+o A minor enhancement to the list module.  Numbered lists with a defined
+  number of columns now only get one number per line.
+
+o Finally got around to writing an interface to /ignore.  /ahelp ignore for
+  info.  This addresses timed, regular, and permanent (that is, persistent
+  across restart) ignores, as well as making them look decent.
+
+o Fixed a bug where, if you were away and did an /rmlog, your logging would
+  be really screwed until you /backed and /awayed again. You can now /rmlog
+  whenever the mood strikes. (PS)
+
+o Finally fixed that goddamn /unban bug which had pestered MANY people.
+
+o /filter for voices/ops now works. (nick)
+
+o /stats l formatting now works on undernet as well (nick)
+
+o Fixed an old completion bug with cycling (john)
+
+o Fixed the logger to tolower() filenames (john)
+
+o Added a new config, check_clones_on_join.  Turning this on will check to
+  see if the user joining a channel is a clone (that is, if there are any
+  other people on the channel from the same host as him). (maloy)
+ 
+Changes in 1.2b1:
+
+o Added a new config, away_log_sent.  Turning this on logs messages sent, as
+  well as received, in the away log. (jonas)
+
+o Began differentiating special *network* support, and special server
+  support.  Support for specific daemon features is now in share/server/*
+  files and is handled by the server module.  This should be more-or-less
+  transparent.
+
+o It is now possible to align public text with the use of the align_public,
+  align_public_min, and align_public_max configs.  Simply doing /set
+  align_public on will work nicely for just about everyone. (john)
+
+o Fixed a silly longstanding bug in the /set alias where /set -something
+  didn't work right.
+
+o Made /rlmod a lot smarter about reloading modules.  You can now reload
+  a module without unloading its dependants, and if you /rlmod a depend-
+  loaded module it will not be set as user-loaded as it was before.
+
+o Made it possible to unload a module with dependencies all in one swipe
+  (this is the default behavior now, so if you /rmmod channel, it will take
+   lots of other things with it).
+
+o fixed a silly bug with ac.hash() that always forced things to hash only
+  the first 20 characters.
+
+o the logging system for all modules has been replaced, and logging has been
+  improved extensively via the log module.
+
+o the /away module does better cleanup on exit now hopefully. (jonas)
+
+o There's a new XMMS module.  Of course it's only useful if you use xmms,
+  in which case you might want to /insmod xmms.
+
+o Huge infrastructure changes have been made.  Most of them are not very
+  interesting unless you're writing a module or something.
+
+o /grep and /paste output are no longer lastlogged!  This fixes an annoying
+  and longstanding bug. (thanks hop)

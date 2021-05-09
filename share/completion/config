@@ -1,0 +1,8 @@
+@a.completion.add(config %"ac.config.list" %+)
+@a.completion.add(config -m %"ac.module.list")
+@a.completion.alias(config aconfig)
+
+@a.completion.add(set %"ac.config.list,getsets(*)")
+
+@a.completion.add(cfinfo %"ac.config.list")
+

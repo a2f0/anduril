@@ -1,0 +1,98 @@
+################################################################################
+### section 1 of the epic help manual.
+@a.completion.add(away %*)
+@a.completion.add(signoff %*)
+@a.completion.alias(signoff bye exit quit)
+@a.completion.add(join %[,]C)
+@a.completion.alias(join channel)
+@a.completion.add(ctcp %[,]c,n %'clientinfo,finger,userinfo,version')
+@a.completion.add(dcc chat %N)
+@a.completion.add(dcc get %d)
+@a.completion.add(dcc send %N %f)
+@a.completion.add(describe %[,]c,N %n)
+@a.completion.add(disconnect)
+@a.completion.add(help)
+@a.completion.add(ignore)
+@a.completion.add(invite %N %c)
+@a.completion.add(kick %c %n)
+@a.completion.add(lastlog)
+@a.completion.add(leave %c)
+@a.completion.alias(leave part)
+@a.completion.add(me %n*)
+@a.completion.add(mode %c)
+@a.completion.add(msg %N)
+@a.completion.add(nick)
+@a.completion.add(notice %N)
+@a.completion.add(notify)
+@a.completion.add(ping %N)
+@a.completion.add(query %N)
+@a.completion.add(reconnect)
+@a.completion.add(say)
+@a.completion.add(server %H)
+@a.completion.add(silence)
+@a.completion.add(topic %c)
+################################################################################
+### section 2
+@a.completion.add(server %s,N)
+@a.completion.add(date %s,N)
+@a.completion.alias(date time)
+@a.completion.add(flush)
+@a.completion.add(userhost %N*)
+@a.completion.alias(userhost host)
+@a.completion.add(info %s)
+@a.completion.add(ison %N)
+@a.completion.add(links %s)
+@a.completion.add(list)
+@a.completion.add(lusers %+ %s)
+@a.completion.add(map)
+@a.completion.add(motd %s,N)
+@a.completion.add(names %C)
+@a.completion.add(stats %+ %s)
+@a.completion.add(trace %s,N)
+@a.completion.add(userip %N*)
+@a.completion.add(version %s,N)
+@a.completion.add(who)
+@a.completion.add(whois %s,N %N*)
+@a.completion.add(whowas %N)
+################################################################################
+### section 3
+@a.completion.add(connect %s %+ %s)
+@a.completion.add(deop)
+@a.completion.add(die)
+@a.completion.add(kill %[,]N)
+@a.completion.add(oper)
+@a.completion.add(rehash)
+@a.completion.add(restart)
+@a.completion.add(rping %s)
+@a.completion.add(squit %s)
+@a.completion.add(uping %s)
+@a.completion.add(wallops)
+################################################################################
+### section 4: does anyone want this?
+
+################################################################################
+### section 5: partial
+
+### construct a list of available commands in our $PATH
+fe ($split(: $getenv(PATH))) xx {
+	@push(a.completion.lists.execcmd $sar(g$xx/$glob($xx/*)))
+}
+@a.completion.add(exec %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -direct %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -name %+ %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -in %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -out %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -msg %N,c %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -notice %N,c %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -window %"a.completion.lists.execcmd" %f*)
+@a.completion.add(exec -close %+)
+
+@a.completion.add(load -args %f*)
+@a.completion.add(load %f*)
+
+################################################################################
+### the module itself
+@a.completion.add(cmpctl -c %c)
+@a.completion.add(cmpctl -h %h)
+@a.completion.alias(cmpctl compctl cmpset)
+

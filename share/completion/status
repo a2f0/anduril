@@ -1,0 +1,3 @@
+@a.completion.add(status)
+@a.completion.alias(status sbar)
+

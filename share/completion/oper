@@ -1,0 +1,10 @@
+@a.completion.add(wallops)
+
+@a.completion.add(operview)
+
+@a.completion.add(clonekill)
+@a.completion.alias(clonekill ckill killclones)
+
+@a.completion.add(showclones)
+@a.completion.alias(showclones clonecheck findclones)
+

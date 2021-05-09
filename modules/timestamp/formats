@@ -1,0 +1,9 @@
+# formats for type ts
+ac.format.add                   ts $(dcol2)[$(hcol2)@h@$(dcol2):$(hcol2)@m@$(col2)@merid@$(dcol2)]%n
+ac.format.add                   ts @mon@/@d@/@y@ @h@:@m@:@s@:%n
+# ---
+
+# formats for type longts
+ac.format.add               longts @dayofweek@ @monthname@ @d@ @y@; @h@:@m@@merid@
+# ---
+

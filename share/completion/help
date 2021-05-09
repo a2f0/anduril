@@ -1,0 +1,3 @@
+@a.completion.add(ahelp %'command,config,format,module',"ac.command.list" %"ac.command.list,ac.config.list,ac.format.list,ac.module.list")
+@a.completion.add(man)
+

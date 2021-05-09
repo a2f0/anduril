@@ -1,0 +1,51 @@
+# $Id: bahamut,v 1.20 2003/05/25 01:29:10 wd Exp $
+
+:module server set
+ac.package server
+
+eval load $apath/share/server/cmd.samode
+eval load $apath/share/server/cmd.services
+eval load $apath/share/server/msg.client
+eval load $apath/share/server/msg.general
+eval load $apath/share/server/msg.ops
+
+# klines
+@a.server.sfilter.add(kline a.server.bahamut.kline.display)
+@a.server.sfilter.add(unkline a.server.bahamut.kline.display)
+
+^on ^server_notice "% % NOTICE -- % added temporary % min. K-Line for [%] [*]" {
+    @a.server.sfilter(kline $4-)
+}
+^on ^server_notice "% % NOTICE -- % added K-Line for [%] [*]" {
+    @a.server.sfilter(kline $4-)
+}
+^on ^server_notice "% % NOTICE -- % has removed the K-Line for: [%]*" {
+    @a.server.sfilter(unkline $4-)
+}
+
+alias a.server.bahamut.kline.display (type, win, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+    @:by = from
+
+    if (match(added?temporary* \"$^"(msg)\")) {
+	@:time = word(2 $msg)
+	@:addr = rest(1 $chop(1 $word(6 $msg)))
+	@:reason = rest(1 $chop(1 $restw(7 $msg)))
+
+	a.oper.echo $win $(hcol1)temp$(col1)kline$(dcol1)\($(ncol)$time$(dcol1)\) $(dcol1)[$(ncol)$addr$(dcol1)]$(ncol) by $(hcol1)$by $(dcol1)[$(ncol)$reason$(dcol1)]
+    } else if (match(added?K-Line* \"$^"(msg)\")) {
+        @:addr = strip([] $word(3 $msg))
+        @:reason = strip([] $restw(4 $msg))
+
+	a.oper.echo $win $(hcol1)perm$(col1)kline $(dcol1)[$(ncol)$addr$(dcol1)]$(ncol) by $(hcol1)$by $(dcol1)[$(ncol)$reason$(dcol1)]
+    } else {
+	@:addr = rest(1 $chop(1 $word(5 $msg)))
+
+	a.oper.echo $win $(hcol1)kline $(dcol1)[$(ncol)$addr$(dcol1)] $(col1)removed$(ncol) by $(hcol1)$by 
+    }
+}
+
+:module server unset
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

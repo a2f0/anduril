@@ -1,0 +1,109 @@
+### $Id: timestamp.am,v 1.18 2002/11/17 08:35:50 wd Exp $
+
+:new module timestamp
+:mod timestamp version 26
+:mod timestamp desc provides simple timestamp formats
+:mod timestamp author wd@anduril.org White_Dragon Chip Norkus
+:mod timestamp dep config list
+
+# get available timestamp types by traversing module metadata
+alias a.timestamp.getavail {
+    for xx in ($aliasctl(assign pmatch modules.*.meta.timestamp)) {
+	@push(:vals $($xx))
+    }
+    
+    return $vals
+}
+
+:new command timestamp [[+|-]type]
+:comm timestamp desc change values in the timestamp config
+:comm timestamp aliases ts
+:comm timestamp xref conf:timestamp
+:comm timestamp help \
+this command allows you to add/remove values in the 'timestamp' config.  \
+it also, if used with no arguments, will list the available timestamp types
+
+alias timestamp (args) {
+    if (args == []) {
+	a.list.start u 0 available ts types
+	for xx in ($a.timestamp.getavail()) {
+	    a.list.add $xx
+	}
+	a.list.end
+	return
+    }
+
+    @:cv = ac.config(timestamp)
+    @:avail = a.timestamp.getavail()
+    for xx in ($args) {
+	@:p = left(1 $xx)
+	@:w = rest(1 $xx)
+	if (p != [+] && p != [-]) {
+	    @:p = [+]
+	    @:w = xx
+	}
+	if (findw($w $avail) == -1) {
+	    aerrecho $w is not an available timestamping type
+	    continue
+	}
+	switch ($p) {
+	    (+) {
+		@push(:cv $w)
+	    }
+	    (-) {
+		@:cv = remw($w $cv)
+	    }
+	}
+    }
+    @:cv = sort($uniq($cv))
+
+    config timestamp $cv
+}
+	    
+:new config timestamp types of messages to timestamp
+:conf timestamp value log
+:conf timestamp type is
+:conf timestamp xref comm:timestamp form:ts form:longts
+:conf timestamp help \
+this config allows the user to determine which types of messages they wish to \
+have timestamped.  available messages are determined by what modules are \
+loaded.  this config can be specially tweaked with the 'timestamp' command.
+
+:new format ts timestamp (short format)
+:form ts arguments @y@ @mon@ @d@ @h@ @m@ @s@ @dayofweek@ @monthname@ @merid@
+:form ts flags i
+
+:new format longts timestamp (long format)
+:form longts arguments @y@ @mon@ @d@ @h@ @m@ @s@ @dayofweek@ @monthname@ @merid@
+
+### the ts function
+### with no arguments gives short ts
+### if $0 == long, gives long ts
+
+# this function is used to provide timestamps depending on the type given.
+# basically, if you want to dependently get a regular timestamp for a channel
+# message, you can simply do: $a.timestamp(channel).  the second argument
+# optionally specifies the format to use (ts or longts), and the third argument 
+# optionally specifies that you wish a banner to be returned if no timestamping
+# is available.
+#
+# additionally, a space is appended to the return value (if any) to alleviate
+# extra spaces appearing where they shouldn't.  if you want to force timestamp
+# generation, simply provide any number as the type (1 works well here).
+alias a.timestamp (type, format default "ts", banner) {
+    if (!isnumber($type) && findw($type $ac.config(timestamp)) == -1) {
+	if (banner != []) {
+	    @:function_return = [$fparse(banner) ]
+	}
+    } else {
+	if (CLOCK_24HOUR == [ON]) {
+	    @:function_return = \
+	     [$fparse($format $strftime($time() %Y %m %d %H %M %S %A %B)) ]
+	} else {
+	    @:function_return = \
+	     [$fparse($format $strftime($time() %Y %m %d %I %M %S %A %B %p)) ]
+	}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

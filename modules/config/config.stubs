@@ -1,0 +1,142 @@
+### $Id: config.stubs,v 1.13 2001/10/28 10:11:53 wd Exp $
+ac.package config
+
+alias config {
+	if ([$0] == []) {
+		fe ($ac.config.list) xx {
+			if (pass(i $configs[$xx][flags]) != []) {
+				@:list #= [$xx ]
+			}
+		}
+		a.config.list $list
+		return
+	}
+	
+	if ([$0] == [-a]) {
+		a.config.list $ac.config.list
+		return
+	}
+	
+	if ([$0] == [-m]) {
+		if ([$1] == []) {
+			@usage(config)
+			return
+		}
+		if (ac.module.find($1)) {
+			if (modules[$1][configs][list] != []) { 
+				a.config.list $modules[$1][configs][list]
+			} else {
+				aerrecho no configs for module $1
+			}
+		} else {
+			aerrecho no such module $1
+		}
+		return
+	}
+	
+	if (left(1 $0) == [-]) {
+		@:unset = 1
+		@:c = rest(1 $0)
+	} else {
+		@:c = [$0]
+	}
+	@:v = [$1-]
+	
+	if (ismask($c)) {
+		### recursion, good for the heart!
+		@:confs = ac.config.find($c)
+		if (confs) {
+			fe ($confs) xx {
+				if (unset) {
+					config -$xx
+				}{
+					config $xx $v
+				}
+			}
+		} else {
+			aerrecho could not find any configs/sets matching $0
+			return
+		}
+		
+		return
+	} else {
+		@:conf = ac.config.find($c)
+		if (numwords($conf) != 1) {
+			if (numwords($conf)) {
+				aerrecho config $c is ambiguous \(matches $conf\)
+				return
+			} else {
+				aerrecho could not find config/set $c
+				return
+			}
+		}
+	}
+	
+	if (unset) {
+		if (pass(ws $configs[$conf][flags]) != []) {
+			@ac.config.set($conf)
+		} else {
+			@ac.config.set($conf 0)
+		}
+		aecho unset config $conf
+		return
+	}
+	
+	if (v != []) {
+		if (ac.config.set($conf $v)) {
+			aecho set $conf to $v
+		}
+		return
+	}
+	
+	if (pass(b $configs[$conf][flags])) {
+		if (ac.config($conf)) {
+			aecho $conf: on
+		} else {
+			aecho $conf: off
+		}
+	} else {
+		aecho $conf: $configs[$conf][value]
+	}
+}
+
+alias set (var, setting) {
+	if (var == []) {
+		a.config.list $ac.config.list $getsets(*)
+		return
+	}
+	
+	@:unset = 0
+	if (left(1 $var) == [-]) {
+		@:unset++
+		@:var = rest(1 $var)
+	}
+	if (getsets($var\*) != []) {
+		//set ${unset ? [-] : []}$var $setting
+	} else {
+		config ${unset ? [-] : []}$var $setting
+	}
+}
+
+alias a.config.list {
+	@:list = sort($tolower($*))
+	
+	@:mlen = maxlen($list)
+	
+	fe ($list) xx {
+		@:v = getset($xx)
+		if (v == []) {
+			@:v = ac.config($xx)
+			if (pass(b $configs[$xx][flags])) {
+				if (v) {
+					@:v = [on]
+				} else {
+					@:v = [off]
+				}
+			}
+		}
+		aecho $ac.len(-$mlen $xx) $v
+	}
+}
+
+# vim: syntax=off ts=3 ai smartindent

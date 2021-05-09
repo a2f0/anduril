@@ -1,0 +1,350 @@
+### $Id: userlist.am,v 1.14 2003/05/25 01:26:54 wd Exp $
+
+:new module userlist
+:mod userlist version 21
+:mod userlist desc userlist access bits.
+:mod userlist author wd@anduril.org White_Dragon Chip Norkus
+:mod userlist dep box channel save
+:mod userlist save_cmd a.userlist.save
+
+:new command adduser <nick[!user@host mask]> <#channel> [flags] [password]
+:comm adduser desc adds user entries to your user list
+:comm adduser aliases useradd
+:comm adduser flags i
+:comm adduser xref comm:deluser comm:listuser conf:default_user_flags
+:comm adduser help \
+this command adds a new user to your userlist.  if only a nick is given, \
+the user will be added with a mask of their current hostname (if \
+available).  otherwise they will be added with the given mask.  the nick \
+is used only for listing purposes and does not actually factor into the \
+mask. A channel, a list of channels (comma separated) or a mask may given \
+for the channels to provide access on.  If supplied 'flags' specifies what \
+access to give the user, otherwise the config 'user_default_flags' is \
+used.  For a list of flags use /ahelp listuser. If a password is given, \
+the user must give a password for certain requests (invite, etc)
+
+mstub adduser
+
+################################################################################
+:new command listuser
+:comm listuser desc lists userlist entries
+:comm listuser aliases userlist
+:comm listuser flags i
+:comm listuser xref comm:adduser comm:deluser
+:comm listuser help \
+this command lists users currently in your userlist along with their \
+flags.  flags may be any of: %n \
+%t a: meta-flag, automates o/v flags %n \
+%t b: automatically ban+kick+ignore user %n \
+%t d: auto-accept dcc chat/send requests %n \
+%t f: friend meta-flag, equivalent to flags 'aiopu' %n \
+%t i: give user /ctcp invite privileges %n \
+%t j: automatically join a channel when the user invites you %n \
+%t m: master meta-flag, equivalent to flags 'adijopuv' %n \
+%t o: give user /ctcp op privileges %n \
+%t p: 'protect' user (do not allow bans/deops) %n \
+%t u: give user /ctcp unban privileges %n \
+%t v: give user /ctcp voice priveleges %n
+
+mstub listuser
+################################################################################
+:new command deluser <nick> [channel]
+:comm deluser desc deletes entries from the user list
+:comm deluser aliases userdel
+:comm deluser flags i
+:comm deluser xref comm:adduser comm:listuser
+:comm deluser help \
+this command removes users from your user list.  if a channel is not \
+specified all matching entries are removed.
+
+mstub deluser
+################################################################################
+:new config default_user_flags default flags for users in the userlist
+:conf default_user_flags value iopu
+:conf default_user_flags type w
+:conf default_user_flags xref comm:listuser
+:conf default_user_flags help \
+these are the default flags given to users in an /adduser command.  for a \
+list of available flags, see the listuser command's help.
+
+:new config autoop_delay time delay for auto-op'ing people.
+:conf autoop_delay value r
+:conf autoop_delay type w
+:conf autoop_delay help \
+this setting allows you to configure the way the auto-op (and voice) setting \
+is used.  you may set a time in seconds to delay the oping (0 means no delay) \
+or may set this config to 'r' or 'random', meaning a random delay (of at \
+least 5 seconds and no more than 20).
+
+################################################################################
+### internal stuff: add, find, save
+alias a.userlist.add (nick, mask, channel, flags, password) {
+    @:i = a.userlist.find($nick $mask $channel)
+    if (i == -1) @:i = a.userlist.count++
+    @a.userlist[$i][nick] = nick
+    @a.userlist[$i][mask] = mask
+    @a.userlist[$i][channel] = channel
+    @a.userlist[$i][flags] = flags
+    @a.userlist[$i][password] = password
+}
+
+alias a.userlist.find (nick, mask, channel) {
+    if (nick == [-]) {
+	### this implies that we are trying to match the given mask/channel
+	### with a user, and then return the flags.
+	for (@:i = 0, i < a.userlist.count, @:i++) {
+	    if (match($a.userlist[$i][mask] $mask)) {
+		### we may not be given a channel, since it may not matter.
+		if (channel != [] && !rmatch($channel $split(, $a.userlist[$i][channel]))) {
+		    continue
+		} else {
+		    return $a.userlist[$i][flags] $i
+		}
+	    }
+	}
+	return -
+    } else {
+	for (@:i = 0, i < a.userlist.count, @:i++) {
+	    if (a.userlist[$i][nick] == nick && a.userlist[$i][mask] == mask && a.userlist[$i][channel] == channel) {
+		return $i
+	    }
+	}
+	return -1
+    }
+}
+
+mstub a.userlist.save
+################################################################################
+### finally, all the hooks.
+^eval on #-311 $ac.hash(userlist) "*" {
+    if (ac.module.find(whois)) {
+	@:ret = a.userlist.find(- $2\@$3)
+	@:flags = word(0 $ret)
+	@:chans = split(, $a.userlist[$word(1 $ret)][channel])
+	@:chans = [\[channel] ## (numwords($chans) != 1 ? [s] : []) ## [: $chans\]]
+	if (flags == [-]) return
+	if (index(b $flags) != -1) {
+	    a.whois.echo shitlist shitlist is on your shitlist $chans
+	} else {
+	    a.whois.echo friend friend is a friend [$flags] $chans
+	}
+    }
+}
+
+^eval on #-join -$ac.hash(userlist) "*" {
+    @:flags = word(0 $a.userlist.find(- $2 $1))
+
+    if (!ischanop($servernick() $1)) return
+    if (index(a $flags) != -1) {
+	@:time = ac.config(autoop_delay)
+	if (!isnumber($time)) {
+	    @:time = rand(15) + 5
+	}
+	if (index(o $flags) != -1) {
+	    eval timer $time \{ if \(!ischanop\($0 $1\)\) \{//^mode $1 +o $0\}\}
+	} elsif (index(v $flags) != -1) {
+	    eval timer $time \{ if \(!ischanvoice\($0 $1\) != 1\) \{//^mode $1 +v $0\}\}
+	}
+    } elsif (index(b $flags) != -1) {
+	bk $1 $0 you are on my shitlist.
+	@push(a.channel.join.extra shitlisted)
+    }
+    if (pass(iopu $flags) != []) {
+	@push(a.channel.join.extra friend)
+    }
+}
+
+^eval on #-mode_stripped $ac.hash(userlist) "*" {
+    if ([$0] == builtin_expando(N) || !rmatch($1 #* &* +*)) {
+	return
+    }
+    if ([$2] == [-o]) {
+	@:flags = word(0 $a.userlist.find(- $userhost($3) $1))
+	if (index(p $flags) != -1 && [$0] != [$3] && onchannel($0 $1)) {
+	    mode $1 +o $3
+	}
+    } elsif ([$2] == [+b]) {
+	fe ($onchannel($1)) xx {
+	    if (match($3 $xx!$userhost($xx))) {
+		if (pass(p $a.userlist.find(- $userhost($xx) $1)) != []) {
+		    mode $1 -b $3
+		}
+	    }
+	}
+    }
+}
+
+^eval on #-ctcp $ac.hash(userlist) "*" {
+    @:cmd = [$2]
+    @:chan = [$3]
+
+    if (!rmatch($cmd help info op invite voice unban)) {
+	return
+    }
+
+    @:flags = a.userlist.find(- $userhost() $chan)
+    @:user = word(1 $flags)
+    @:flags = word(0 $flags)
+
+    if (flags == [-] || index(b $flags) != -1) {
+	return
+    }
+    switch ($cmd) {
+	(help) {
+	    notice $0 HELP: you may use the following commands via a
+	    notice $0 HELP: /ctcp $servernick() <COMMAND> [args] command:
+	    notice $0 HELP: HELP              - displays this information
+	    notice $0 HELP: INFO              - shows your user information
+	    if (index(i $flags) != -1) {
+		notice $0 HELP: INVITE [#channel] - invites you to a channel
+	    }
+	    if (index(o $flags) != -1) {
+		notice $0 HELP: OP [#channel]     - ops you in a channel
+	    }
+	    if (index(u $flags) != -1) {
+		notice $0 HELP: UNBAN [#channel]  - unbans you from a channel
+	    }
+	    if (index(v $flags) != -1) {
+		notice $0 HELP: VOICE [#channel]  - voices you in a channel
+	    }
+	    }
+	(info) {
+	    if (index(a $flags) != -1) @:auto++
+	    fec ($flags) xx {
+		switch ($xx) {
+		    (d) {
+			@:uflags #= [dcc auto-accept, ]
+		    }
+		    (i) {
+			@:uflags #= [invite access, ]
+		    }
+		    (o) {
+			if (auto) {
+			    @:uflags #= [auto-op + op access, ]
+			} else {
+			    @:uflags #= [op access, ]
+			}
+		    }
+		    (p) {
+			@:uflags #= [protection, ]
+		    }
+		    (u) {
+			@:uflags #= [unban access, ]
+		    }
+		    (v) {
+			if (auto) {
+			    @:uflags #= [auto-voice + voice access, ]
+			} else {
+			    @:uflags #= [voice access, ]
+			}
+		    }
+		}
+	    }
+	    notice $0 INFO: Greetings $0, you have the following access data:
+	    notice $0 INFO: Your access mask is $a.userlist[$user][mask]
+	    notice $0 INFO: You have access on channels matching $a.userlist[$user][channel]
+	    notice $0 INFO: You have the following privileges:
+	    notice $0 INFO: $chop(2 $uflags)
+	}
+	(invite) {
+	    if (index(i $flags) != -1) {
+		if (chan == []) {
+		    @:chan = a.userlist[$user][channel]
+		}
+		if (ischanop($servernick() $chan)) {
+			invite $0 $chan
+		} elsif (onchannel($chan)) {
+		    notice $0 INVITE: I'm sorry Dave, I can't do that.
+		} elsif (ischannel($chan)) {
+		    notice $0 INVITE: I'm not on $chan, sorry!
+		} else {
+		    notice $0 INVITE: Please specify a (valid) channel.
+		}
+	    }
+	}
+	(op) {
+	    if (index(o $flags) != -1) {
+		if (chan == []) {
+		    @:chan = a.userlist[$user][channel]
+		}
+		if (ischanop($servernick() $chan)) {
+		    mode $chan +o $0
+		} elsif (onchannel($chan)) {
+		    notice $0 OP: I'm sorry Dave, I can't do that.
+		} elsif (ischannel($chan)) {
+		    notice $0 OP: I'm not on $chan, sorry!
+		} else {
+		    notice $0 OP: Please specify a (valid) channel.
+		}
+	    }
+	}
+	(unban) {
+	    if (index(u $flags) != -1) {
+		if (chan == []) {
+		    @:chan = a.userlist[$user][channel]
+		}
+		if (ischanop($servernick() $chan)) {
+		    unban $chan $0
+		} elsif (onchannel($chan)) {
+		    notice $0 INVITE: I'm sorry Dave, I can't do that.
+		} elsif (ischannel($chan)) {
+		    notice $0 INVITE: I'm not on $chan, sorry!
+		} else {
+		    notice $0 INVITE: Please specify a (valid) channel.
+		}
+	    }
+	}
+	(voice) {
+	    if (index(v $flags) != -1) {
+		if (chan == []) {
+		    @:chan = a.userlist[$user][channel]
+		}
+		if (ischanop($servernick() $chan)) {
+		    mode $chan +v $0
+		} elsif (onchannel($chan)) {
+		    notice $0 VOICE: I'm sorry Dave, I can't do that.
+		} elsif (ischannel($chan)) {
+		    notice $0 VOICE: I'm not on $chan, sorry!
+		} else {
+		    notice $0 VOICE: Please specify a (valid) channel.
+		}
+	    }
+	}
+    }
+}
+
+^eval on #-dcc_request $ac.hash(userlist) "*" {
+    @:acc = a.userlist.find(- $userhost() *)
+    if (pass(d $acc)) {
+	if ([$1] == [SEND]) {
+	    aecho auto-getting file [$5] from $0!$userhost()
+	    dcc get $0 $5
+	} else {
+	    aecho auto-accepting chat from $0!$userhost()
+	    dcc chat $0
+	}
+    }
+}
+
+^eval on #-invite -$ac.hash(userlist) "*" {
+    @:acc = a.userlist.find(- $userhost() *)
+    if (pass(j $acc)) {
+	aecho auto-joining on invite to $1 from $0!$userhost()
+	//quote join $1
+    }
+}
+
+################################################################################
+@a.userlist.count = 0
+
+if (fexist($apath/etc/userlist) != -1) {
+    eval load $apath/etc/userlist
+}
+
+yell ***** HEY ******
+yell The userlist module is going to be replaced by userlist2!  You'll
+yell need to manually convert your userlist.  Please /rmmod userlist and
+yell /insmod userlist2.  This module will be *REPLACED* soon.
+yell ***** HEY ******
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

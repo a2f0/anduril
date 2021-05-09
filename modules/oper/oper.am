@@ -1,0 +1,504 @@
+### $Id: oper.am,v 1.43 2004/03/03 10:10:33 wd Exp $
+
+:new module oper
+:mod oper version 50
+:mod oper desc generic oper module
+:mod oper author wd@anduril.org White_Dragon Chip Norkus
+:mod oper dep box usage status server
+:mod oper unload_cmd a.oper.unload
+
+:new command wallops <messages>
+:comm wallops desc sends a wallops (oper command)
+:comm wallops aliases wo
+:comm wallops flags io
+:comm wallops xref form:starops
+:comm wallops help \
+this command simply sends a wallops.  see your appropriate operator \
+documentation for more information on this.
+
+alias wallops {
+    if (![$0]) {
+	@usage(wallops)
+	return
+    }
+    quote wallops :$*
+}
+
+:new format starops format for wallops (and *ops on some nets)
+:form starops arguments @type@ @name@ @msg@
+:form starops xref comm:wallops conf:wallops_window
+
+@a.server.sfilter.add(wallops a.oper.wallops.display a.oper.wallops.log)
+@a.server.sfilter.add(operwall a.oper.wallops.display a.oper.wallops.log)
+^eval ^on #-hook $ac.hash(oper) "module_loaded server *" {
+    @a.server.sfilter.add(wallops a.oper.wallops.display a.oper.wallops.log)
+    @a.server.sfilter.add(operwall a.oper.wallops.display a.oper.wallops.log)
+}
+
+^on ^wallop * {
+    # support operwall here
+    if ([$3] == [-]) {
+        if ([$2] == [OPERWALL]) {
+            @a.server.sfilter(operwall $0 $4-)
+            return
+        } elif ([$2] == [WALLOPS]) {
+            @a.server.sfilter(wallops $0 $4-)
+            return
+        }
+    }
+    @a.server.sfilter(wallops $0 $2-)
+}
+
+alias a.oper.wallops.display (type, win, from, msg) {
+    a.oper.echo $win $fparse(starops $type $from $msg)
+}
+
+alias a.oper.wallops.log (type, file, from, msg) {
+    @a.log(server/$file $fparse(starops $type $from $msg))
+}
+
+:new config wallops_window window to send wallops to (-1 = current)
+:conf wallops_window value operview
+:conf wallops_window type n
+:conf wallops_window xref comm:wallops form:starops
+
+### oper echo cmd stuff
+
+alias a.oper.echo (window, text) {
+    @:window = winnum($window)
+    if (window == -1) {
+	@:window = winnum()
+    }
+    a.server.echo O $window $text
+}
+
+### operview crap here:
+
+^bind ^[o parse_command ov
+
+:new command operview [on|off]
+:comm operview desc turns the operview window on or off
+:comm operview aliases ov
+:comm operview flags i
+:comm operview xref conf:operview_auto conf:operview_hide conf:operview_size
+:comm operview help \
+this command turns the operview window on.  when this window is on, \
+certain oper data such as kills, clone kills, and some notices will be \
+sent to this window, if it is off, all traffic will be sent to the current \
+window
+
+alias operview {
+    if ([$0] == []) {
+	if (winnam() == [operview]) {
+	    ^window back
+	} else {
+	    ^window refnum_or_swap operview
+	}
+	return
+    }
+
+    switch ($0) {
+	(on) {
+	    if (winnum(operview) != -1) {
+		aerrecho operview is already on!
+		return
+	    }
+	    ^window new num $ac.hash(oper) name operview size $ac.config(operview_size)
+	    ^window operview double off scroll on fixed on skip on
+	    ^window operview level snotes,opnotes,wallops
+	    ^window operview status_special operview
+	    ^window operview status_format "$format_other_status"
+	    if (ac.config(operview_hide)) {
+		^window operview fixed off hide
+	    } else {
+		^window back
+	    }
+	}
+	(off) {
+	    if (winnum(operview) == -1) {
+		aerrecho operview is already off!
+		return
+	    }
+	    ^window refnum operview kill
+	}
+    }
+    a.oper.echo operview operview is ${winnum(operview) != -1 ? [on] : [off]}
+}
+
+alias a.oper.operview_size_chng_cmd {
+    if (winnum(operview)!=-1) {
+	^window operview size $ac.config(operview_size)
+    }
+}
+
+alias a.oper.operview_hide_chng_cmd {
+    if (winnum(operview)!=-1) {
+	if (!ac.config(operview_hide)) {
+	    ^window operview show operview size $ac.config(operview_size) back
+	} else {
+	    ^window operview hide
+	}
+    }
+}
+
+:new config operview_size size of the operview window
+:conf operview_size value 5
+:conf operview_size flags nt
+:conf operview_size change_cmd a.oper.operview_size_chng_cmd
+:conf operview_size xref comm:operview
+
+:new config operview_hide hide the operview window?
+:conf operview_hide value 0
+:conf operview_hide flags bt
+:conf operview_hide change_cmd a.oper.operview_hide_chng_cmd
+:conf operview_hide xref comm:operview
+
+:new config operview_auto automatically create operview window on load?
+:conf operview_auto value 1
+:conf operview_auto flags bt
+:conf operview_auto xref comm:operview
+
+^eval on #-hook $ac.hash(oper) "module_loaded oper *" {
+    if (ac.config(operview_auto)) {
+	ov on
+    }
+    ^eval on #-hook $ac.hash(oper) -"module_loaded oper *"
+}
+
+alias a.oper.unload {
+    if (winnum(operview) != -1) {
+	ov off
+    }
+}
+
+
+### kline goodies
+### aliases taken from odelay/adm@hellhole.net (and modified slightly)
+:new command kline <nick|host> [reason]
+:comm kline desc interface to server kline command
+:comm kline flags o
+:comm kline xref comm:unkline
+:comm kline help \
+this is a simple interface to the server KLINE command, passing only the \
+host, and (optionally) a reason.
+
+alias kline (host, reason) {
+    if (host == []) {
+	@usage(kline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote kline $host :$reason
+}
+
+:new command unkline [stuff]
+:comm unkline desc interface to server unkline command
+:comm unkline flags o
+:comm unkline xref comm:kline
+:comm unkline help \
+this is a very simple/straightforward interface to the server's /unkline \
+command.  it simply passes the arguments via /quote.
+
+alias unkline {quote unkline $*}
+
+:new command pkline <nick|host> [reason]
+:comm pkline desc interface to server pkline command
+:comm pkline flags o
+:comm pkline help \
+this command behaves exactly like the /kline alias except that, on servers \
+which support timed klines, it will force a permanent kline.  (and won't \
+work quite right on servers which don't support this)
+
+alias pkline (host, reason) {
+    if (host == []) {
+	@usage(pkline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote kline 0 $host :$reason
+}
+
+:new command tkline <time> <nick|host> [reason]
+:comm tkline desc interface to server tkline command
+:comm tkline flags o
+:comm tkline help \
+this command behaves exactly like the /kline alias except that, on servers \
+which support timed klines, it will set a timed kline.  (and won't \
+work quite right on servers which don't support this)
+
+alias tkline (time, host, reason) {
+    if (host == [] || !isnumber($time)) {
+	@usage(tkline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote kline $time $host :$reason
+}
+
+
+### dline loven
+### aliases taken from odelay/adm@hellhole.net (and modified slightly)
+:new command dline <nick|ip|cidr> [reason]
+:comm dline desc interface to server dline command
+:comm dline flags o
+:comm dline xref comm:undline
+:comm dline help \
+this is a simple interface to the server DLINE command, passing only the \
+host, and (optionally) a reason.
+
+alias dline (host, reason) {
+    if (host == []) {
+	@usage(dline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote dline $host :$reason
+}
+
+:new command undline [stuff]
+:comm unkline desc interface to server undline command
+:comm unkline flags o
+:comm unkline xref comm:dline
+:comm unkline help \
+this is a very simple/straightforward interface to the server's /undline \
+command.  it simply passes the arguments via /quote.
+
+alias undline {quote undline $*}
+
+### zline loven
+### aliases taken from odelay/adm@hellhole.net (and modified slightly)
+:new command zline <nick|ip> [reason]
+:comm zline desc interface to server zline command
+:comm zline flags o
+:comm zline xref comm:unzline
+:comm zline help \
+this is a simple interface to the server ZLINE command, passing only the \
+host, and (optionally) a reason.
+
+alias zline (host, reason) {
+    if (host == []) {
+	@usage(zline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote zline $host :$reason
+}
+
+### gline loven
+### aliases taken from odelay/adm@hellhole.net (and modified slightly)
+:new command gline <host> <reason>
+:comm gline desc interface to server gline command
+:comm gline flags o
+:comm gline help \
+this is a simple interface to the server GLINE command, passing only the \
+host, and a reason.
+
+alias gline (host, reason) {
+    if (host == []) {
+	@usage(gline)
+	return
+    }
+    if (reason == []) {
+	@:reason = [No reason]
+    }
+    quote gline $host :$reason
+}
+
+### lastg loven
+### aliases taken from odelay/adm@hellhole.net
+:new command lastg <optional new msg>
+:comm lastg desc interface to server lastg command
+:comm lastg flags o
+:comm lastg help \   
+this is a cmd to 2nd a gline request. it grabs the current gline host/msg \
+and issues the gline cmd. gline requests expire after 1 min.
+
+alias lastg {
+        if (!lastglinereq) {
+                aecho No gline is available for voting.
+                return
+        }
+        ^gline $lastglinereq ${[$*] ? [$*] : lastglinersn}
+}
+
+### flushg loven
+### aliases taken from odelay/adm@hellhole.net
+:new command flushg  
+:comm flushg desc interface to server flushg command
+:comm flushg flags o
+:comm flushg help \
+this is a cmd to flush gline requests. \
+        
+alias flushg {
+        ^assign -lastglinereq
+        ^assign -lastglinersn
+}
+
+### and the clone section is here!
+:new command clonekill <mask> [reason]
+:comm clonekill desc utility for killing clones
+:comm clonekill aliases ckill killclones
+:comm clonekill flags o
+:comm clonekill help \
+this command is used very simply to kill a group of clones on a given \
+mask. the mask can be nick!user@host, user@host, simply a host, or \
+#channel (the # is *mandatory*).  if possible the kill command will be \
+used in an aggregate fashion (i.e. /kill nick1,nick2,nick3 ..).  If no \
+reason is supplied, the simply reason 'clones' will be used.
+
+alias clonekill (mask, reason) {
+    if (mask == []) {
+	@usage(clonekill)
+	return
+    }
+    @:reason = reason != [] ? reason : [clones]
+    a.oper.clone.find $mask a.oper.clone.kill $reason
+}
+
+alias a.oper.clone.kill (reason) {
+    @:num = 1
+    if (match(bahamut* $builtin_expando(R))) {
+	@:num = 5
+    }
+
+    while (a.oper.clone.list != []) {
+	//kill $sar(g/ /,/$leftw($num $a.oper.clone.list)) $reason
+	@a.oper.clone.list = restw($num $a.oper.clone.list)
+    }
+}
+
+:new command showclones <mask>
+:comm showclones desc shows clones from a given mask
+:comm showclones aliases clonecheck findclones
+:comm showclones help \
+this command checks for clones (on all of the network), and displays any \
+finds. mask may be nick!user@host, user@host, just host, or #channel \
+(the # is *mandatory*).  Useful mostly for IRC operators.  Doing channel \
+clonechecks makes little sense.  Just /who the channel.
+
+alias showclones (mask) {
+    if (mask == []) {
+	@usage(showclones)
+    }
+
+    a.oper.clone.find $mask a.oper.clone.show
+}
+
+alias a.oper.clone.show {
+    a.list.start u 0 clones on $a.oper.clone.mask
+    fe ($a.oper.clone.list) xx {
+	a.list.add $xx
+    }
+    a.list.end $#a.oper.clone.list clones
+}
+
+### checks clones from $0, if $1- exist,
+### $1 is the command to perform on each clone, 
+### with $2- being args to that command
+alias a.oper.clone.find (mask, cmd, args) {
+    if (mask == []) {
+	return
+    }
+
+    @:nick = :user = :host = :chan = [*]
+    if (match(#* $mask)) {
+	@:chan = mask
+    } elsif (match(*!*@* $mask)) {
+	@:nick = before(-1 ! $mask)
+	@:user = after(! $before(-1 @ $mask))
+	@:host = after(-1 @ $mask)
+    } elsif (index(@ $0) != -1) {
+	@:user = before(-1 @ $mask)
+	@:host = after(-1 @ $mask)
+    } else {
+	@:host = mask
+    }
+
+    @a.oper.clone.list = a.oper.clone.endcmd = a.oper.clone.cmdargs = []
+    @a.oper.clone.mask = [$nick\!$user\@$host]
+    if (cmd) {
+	@a.oper.clone.endcmd = cmd
+	if (args) {
+	    @a.oper.clone.cmdargs = args
+	}
+    }
+
+    ### try channel first, then nick, then user, then host
+    if (chan != [*]) {
+	@:whomask = chan
+    } elsif (nick != [*]) {
+	@:whomask = nick
+    } elsif (user != [*]) {
+	@:whomask = user
+    } else {
+	@:whomask = host
+    }
+
+    //^who -line {a.oper.clone.add $*} -end {a.oper.clone.end $*} $whomask
+}
+
+alias a.oper.clone.add (chan, nick, stat, user, host, serv, hops, gcos) {
+    if (match($a.oper.clone.mask $nick\!$user\@$host)) {
+	@push(a.oper.clone.list $nick)
+    }
+}
+
+alias a.oper.clone.end (serv, mask) {
+    if (a.oper.clone.endcmd) {
+	$a.oper.clone.endcmd $a.oper.clone.cmdargs
+    }
+}
+
+### aliases taken from odelay/adm@hellhole.net
+:new command findk <mask> [-remove]
+:comm findk desc shows clones from a given mask
+:comm findk aliases fndk
+:comm findk help \
+this command checks stats K for kline matching a defined mask \
+you can also remove klines matching mask by adding -remove at \
+the end of the command.
+
+alias findk (host, flag) {
+    if (host == [] || (index(@ $host) == -1)) {
+	@usage(findk)
+	return
+    }
+
+    ^local myk
+    ^stack push on 216
+    ^stack push on 219
+
+    ^on ^216 "*" {
+	bless
+	if (match($host $4@$2)) {
+	    @ xyz++
+	    @ myk++
+	    aecho FINDK: \($(hcol1)$myk$(ncol)\) $4@$2 $before(-1 \( $(col1)$5-)
+	    if (flag == [-remove]) {
+		^quote unkline $4@$2
+	    }
+	}
+    }
+	
+    ^on ^219 "*" {
+	xecho -b $1 :End of /STATS report. $(hcol1)${[$xyz] ? [$xyz] : [0]} $(ncol)Total.
+	^assign -xyz
+	stack pop on 216
+	stack pop on 219
+    }
+
+    //stats K
+    wait
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,249 @@
+### $Id: msg.am,v 1.36 2004/03/03 10:05:48 wd Exp $
+
+:new module msg
+:mod msg version 69
+:mod msg desc message module for formats and aliases and logging
+:mod msg author wd@anduril.org White_Dragon Chip Norkus
+:mod msg depend usage timestamp log
+:mod msg meta timestamp msg
+
+:new format msg displayed when a message is received
+:form msg slaves send_msg
+:form msg flags i
+:form msg arguments @nick@ @user@ @host@ @message@
+:form msg xref comm:msg
+
+:new format send_msg displayed when a message is sent
+:form send_msg arguments @nick@ @message@
+:form send_msg xref form:msg comm:msg
+
+:new format maction displayed when a private action is received
+:form maction slaves send_maction
+:form maction arguments @nick@ @user@ @host@ @message@
+:form maction xref form:msg
+
+:new format send_maction displayed when a private action is sent
+:form send_maction arguments @to@ @nick@ @message@
+:form maction xref form:msg form:maction
+
+:new command msg <nick|#channel> <stuff>
+:comm msg desc sends a message to specified target
+:comm msg flags
+:comm msg aliases m
+:comm msg xref form:msg form:maction conf:msg_log
+:comm msg help \
+sends a message to the specified target.  if it is something other than \
+a nick, the msg module does not handle it, otherwise it does appropo \
+logging and formatting
+
+mstub msg
+
+^on ^send_msg "*" {
+    @:s = fparse(send_msg $*)
+    echo $a.timestamp(msg)$s
+    a.msg.log $0 $s
+}
+
+^on ^msg "*" {
+    @:s = fparse(msg $0 $a.msg.shorten($userhost()) $1-)
+    echo $a.timestamp(msg)$s
+    a.msg.log $0 $s
+}
+
+^on ?send_action "*" {
+    if (!ischannel($0)) {
+	@:s = fparse(send_maction $0 $servernick() $1-)
+	echo $a.timestamp(msg)$s
+	a.msg.log $0 $s
+	return 1
+    }
+    return 0
+}
+
+^on ^action '% $servernick() *' {
+    @:s=fparse(maction $0 $a.msg.shorten($userhost()) $2-)
+    echo $a.timestamp(msg)$s
+    a.msg.log $0 $s
+}
+
+:new format notice displayed when a notice is received
+:form notice slaves send_notice
+:form notice flags i
+:form notice arguments @nick@ @user@ @host@ @message@
+:form notice xref comm:notice
+
+:new format send_notice displayed when a notice is sent
+:form send_notice arguments @nick@ @message@
+:form notice xref form:notice comm:notice
+
+:new command notice <nick|#channel> <stuff>
+:comm notice desc sends a notice to specified target
+:comm notice aliases n
+:comm notice xref form:notice conf:msg_log
+:comm notice help \
+sends a notice to the specified target.  if it is something other than a \
+nick, the msg module does not handle it, otherwise it does appropo logging \
+and formatting
+
+mstub notice
+
+^on ^send_notice "*" {
+    @:s = fparse(send_notice $*)
+    if (!ischannel($0)) {
+	echo $a.timestamp(msg)$s
+	a.msg.log $0 $s
+    }
+}
+
+^on ^notice "*" {
+    if (userhost() != []) {
+	if (match(*@* $userhost())) {
+	    @:s = fparse(notice $0 $a.msg.shorten($userhost()) $1-)
+	} else {
+	    @:s = fparse(notice $0 $a.msg.shorten(<unknown>@$userhost()) $1-)
+	}
+    } else {
+	@:s = fparse(notice $0 <unknown> <unknown> $1-)
+    }
+    if (!ischannel($0)) {
+	echo $a.timestamp(msg)$s
+	a.msg.log $0 $s
+    }
+}
+
+### away blocking stuff
+:new config ignore_away_replies ignore repeated away messagess?
+:conf ignore_away_replies flags ib
+:conf ignore_away_replies value 0
+:conf ignore_away_replies xref comm:msg
+:conf ignore_away_replies help \
+this configuration setting, when turned on, will block repeated away \
+messages from individual targets for a period of time (ten minutes)
+
+^on ^301 "*" {
+    if (ac.config(ignore_away_replies)) {
+	@:enc = ac.encode($0)
+	if (a.msg.aways[$enc][last] == []) {
+	    # if we have no record, create one
+	    @a.msg.aways[$enc][last] = time()
+	    @a.msg.aways[$enc][msg] = [$1-]
+	} elsif (a.msg.aways[$enc][last] < time() - 600) {
+	    # otherwise see if this record has expired
+	    ^assign -a.msg.aways[$enc][last]
+	    ^assign -a.msg.aways[$enc][msg]
+	} elsif (a.msg.aways[$enc][msg] != [$1-]) {
+	    # or if the message has changed
+	    ^assign -a.msg.aways[$enc][last]
+	    ^assign -a.msg.aways[$enc][msg]
+	} else {
+	    return
+	}
+
+    }
+    aecho $0 is away: $1-
+    @a.msg.aways[$enc][last] = time()
+    @a.msg.aways[$enc][msg] = [$1-]
+}
+
+### mesgview stuff
+:new command mesgview [on|off]
+:comm mesgview desc turns on a message window
+:comm mesgview aliases mv
+:comm mesgview flags i
+:comm mesgview xref conf:mesgview_hide conf:mesgview_size conf:mesgview_auto
+:comm mesgview help \
+this command creates a window which will capture all messages for display \
+only in that window.
+
+mstub mesgview
+
+:new config mesgview_size size of the mesgview window
+:conf mesgview_size value 5
+:conf mesgview_size flags nt
+:conf mesgview_size change_cmd a.msg.mesgview_size_chng_cmd
+:conf mesgview_size xref comm:mesgview
+
+alias a.msg.mesgview_size_chng_cmd {
+   if (winnum(mesgview) != -1) {
+	 ^window mesgview size $ac.config(mesgview_size)
+    }
+}
+
+:new config mesgview_hide hide the mesgview window?
+:conf mesgview_hide value 0
+:config mesgview_hide flags bt
+:conf mesgvie_hide change_cmd a.msg.mesgview_hide_chng_cmd
+:conf mesgview_hide xref comm:mesgview
+
+alias a.msg.mesgview_hide_chng_cmd {
+    if (winnum(mesgview) != -1) {
+	if (!ac.config(mesgview_hide)) {
+	    ^window mesgview show mesgview size $ac.config(mesgview_size) back
+	} else {
+	    ^window mesgview hide
+	}
+    }  
+}  
+:new config mesgview_auto automatically create mesgview window?
+:conf mesgview_auto value 0
+:conf mesgview_auto flags bt
+:conf mesgview_auto xref comm:mesgview
+
+alias a.msg.mesgview_bind {
+    if (winnum() == winnum(mesgview)) {
+        window back
+    } elsif (winnum(mesgview) != -1) {
+        window refnum_or_swap mesgview
+    } else {
+        aecho mesgview is not enabled.
+    }
+}
+bind ^[m parse_command a.msg.mesgview_bind
+
+### logging stuff
+
+:new config msg_log log messages? (all the time)
+:conf msg_log flags ib
+:conf msg_log value 0
+:conf msg_log xref comm:msg
+
+:new config msg_logfile file to log messages to (either a full path or relative to script's log dir)
+:conf msg_logfile flags w
+:conf msg_logfile value messages.log
+:conf msg_logfile xref conf:msg_log
+
+:new config msg_logtype method to use for logging
+:conf msg_logtype flags n
+:conf msg_logtype value 1
+:conf msg_logtype xref conf:msg_log conf:msg_logfile
+:conf msg_logtype help \
+two methods are available for message logging.  messages may all be placed in \
+a single logfile by setting this config to 0, or they can be placed into \
+individual files by setting it to 1.
+
+mstub a.msg.shorten
+
+:new config msg_shorten_host shorten hostnames in message formats?
+:conf msg_shorten_host flags nt
+:conf msg_shorten_host value 0
+:conf msg_shorten_host xref comm:msg form:msg
+:conf msg_shorten_host help \
+This config is used to shorten hosts seen when people message you.  By \
+default no shortening is done.  However, if you set this config to a value \
+of 1, only the domain will be used, and the rest will be replaced with an \
+elipsis (...), so addresses will appear as 'nick!user@...domain.tld', \
+if you use a value of 2 the elipsis will be omitted (yielding \
+'nick!user@domain.tld')
+
+alias a.msg.log (nick, stuff) {
+    if (ac.config(msg_log)) {
+	if (ac.config(msg_logtype)) {
+	    @:des = a.log(msg/$nick\.log $stuff)
+	    @a.log.set($des autoclose)
+	} else {
+	    @a.log($ac.config(msg_logfile) $stuff)
+	}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

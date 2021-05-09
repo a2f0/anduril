@@ -1,0 +1,10 @@
+@a.completion.add(insmod %"a.modules.list_all"*)
+@a.completion.alias(insmod loadmod)
+
+@a.completion.add(rmmod %"a.modules.list_all"*)
+@a.completion.alias(rmmod unloadmod)
+
+@a.completion.add(rlmod %"a.modules.list_all"*)
+
+@a.completion.add(lsmod)
+@a.completion.alias(lsmod listmod modules)

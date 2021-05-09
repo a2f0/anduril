@@ -1,0 +1,25 @@
+# formats for type server_message
+ac.format.add       server_message [@type@] @from@: @msg@
+ac.format.add       server_message $(dcol1)[$(hcol1)@type@$(dcol1)/$(hcol2)@from@$(dcol1)]$(ncol): @msg@
+# ---
+
+# formats for type kill
+ac.format.add                 kill kill[@oper@[@operserv@]] @unick@[@msg@]
+ac.format.add                 kill $(col1)kill$(dcol1)\($(hcol1)@oper@$(dcol1)/$(hcol1)@operserv@$(dcol1)\) $(ncol)@unick@!@uname@@uhost@ $(dcol1)[$(ncol)@msg@$(dcol1)]
+ac.format.add                 kill $(col1)kill$(dcol1)\($(hcol1)@oper@$(dcol1)/$(hcol1)@operserv@$(dcol1)\) $(ncol)@unick@ $(dcol1)[$(ncol)@msg@$(dcol1)]
+ac.format.add                 kill $(hcol1)kill$(dcol1)[$(hcol2)@oper@$(dcol2)[$(col2)@operserv@$(dcol2)]$(dcol1)] $(col1)@unick@$(dcol1)[$(ncol)@msg@$(dcol1)]
+# ---
+
+# formats for type clonekill
+ac.format.add            clonekill clonekill[@oper@[@operserv@]] @uhost@[@clones@]
+ac.format.add            clonekill $(col1)clonekill$(dcol1)\($(hcol1)@oper@$(dcol1)/$(hcol1)@operserv@$(dcol1)\) $(col1)@uhost@$(dcol1)[$(hcol1)@clones@$(dcol1)]
+ac.format.add            clonekill $(hcol1)clonekill$(dcol1)[$(hcol2)@oper@$(dcol2)[$(col2)@operserv@$(dcol2)]$(dcol1)] $(col1)@uhost@$(dcol1)[$(hcol1)@clones@$(dcol1)]
+# ---
+
+# formats for type services_send
+ac.format.add        services_send $(dcol2)\($(hcol2)@service@$(dcol2)) $(hcol1)->$(ncol) @msg@
+# ---
+
+# formats for type services_recv
+ac.format.add        services_recv $(dcol2)\($(hcol2)@service@$(dcol2))$(ncol) @msg@
+# ---

@@ -1,0 +1,29 @@
+# $Id: hybrid,v 1.13 2004/01/21 07:11:14 wd Exp $
+
+:module server set
+ac.package server
+
+eval load $apath/share/server/msg.client
+eval load $apath/share/server/msg.general
+eval load $apath/share/server/msg.kline.hybrid
+
+:new command operwall <message>
+:comm operwall desc sends a wallops-like message to operators only
+:comm operwall aliases ow
+:comm operwall flags o
+:comm operwall xref form:starops
+:comm operwall help \
+this command sends a wallops message to operators only, as opposed to \
+sending it to all +w users
+
+alias operwall (msg) {
+    if (msg == []) {
+        @usagge(operwall)
+        return
+    }
+    quote operwall :$*
+}
+
+:module server unset
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+

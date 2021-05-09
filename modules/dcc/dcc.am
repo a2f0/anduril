@@ -1,0 +1,275 @@
+### $Id: dcc.am,v 1.20 2002/11/17 08:35:49 wd Exp $
+
+:new module dcc
+:mod dcc version 35
+:mod dcc desc dcc stuff
+:mod dcc author wd@anduril.org White_Dragon Chip Norkus
+:mod dcc depend save usage util
+:mod dcc save_cmd a.dcc.save
+
+### set the store path to the temporary directory
+^eval set dcc_store_path $apath/tmp
+### speed up DCCs
+//^set dcc_sliding_window 32
+
+### aliases
+alias dchat dcc chat $*
+alias dget dcc get $*
+alias dlist dcc list $*
+alias dsend dcc send $*
+
+### wrapper formats
+
+:new format dcc_chat
+:form dcc_chat flags i
+:form dcc_chat slaves dcc_chat_send
+:form dcc_chat arguments @from@ @msg@
+
+:new format dcc_chat_send
+:form dcc_chat_send arguments @to@ @msg@
+
+### ahh, get rid of that pesky ^M that mIRC (and others?) send
+^on ^dcc_chat * {
+    if (right(1 $*) == []) {
+	echo $fparse(dcc_chat $chop(1 $*))
+    } else {
+	echo $fparse(dcc_chat $*)
+    }
+}
+
+^on ^send_dcc_chat * {
+    echo $fparse(dcc_chat_send $*)
+}
+
+:new format dcc_offer
+:form dcc_offer arguments @to@ @type@ @file@ @size@
+
+^on ^dcc_offer "*" {
+    if (index(/ $2)!=-1) {
+	@:file = after(-1 / $2)
+    } else {
+	@:file = [$2]
+    }
+
+    aecho $fparse(dcc_offer $0-1 $file $ac.size_fmt($3))
+}
+
+:new format dcc_request
+:form dcc_request arguments @from@ @type@ @ip@ @port@ @file@ @size@
+
+^on ^dcc_request * {
+    if (index(/ $5)!=-1) {
+	@:file = after(-1 / $5)
+    } else {
+	@:file = [$5]
+    }
+
+    @:ofile = file
+    if (ofile == []) {
+	@:ofile = [x]
+    }
+    aecho $fparse(dcc_request $0-1 $3-4 $file $ac.size_fmt($6))
+    if ([$1] == [SEND] && ac.config(dcc_autoget)) {
+	aecho auto-getting $file from $0
+	^timer 1 {dcc GET $0 $file}
+    } else {
+	@push(a.dcc.offers $0)
+	@push(a.dcc.offers $1)
+	@push(a.dcc.offers $ofile)
+	aecho press ^D to accept, esc-d to list current pending offers
+    }
+}
+
+:new format dcc_connect
+:form dcc_connect arguments @to@ @type@ @ip@ @port@ @file@ @size@
+
+^on ^dcc_connect ^"% RAW *"
+^on ^dcc_connect "*" {
+    if (index(/ $4) != -1) {
+	@:file = after(-1 / $4)
+    } else {
+	@:file = [$4]
+    }
+
+    @:ofile = file
+    if (ofile == []) {
+	@:ofile = [x]
+    }
+    @a.dcc.offers = sar(/$0 $1 $ofile//$a.dcc.offers)
+    aecho $fparse(dcc_connect $0-3 $file $ac.size_fmt($5))
+}
+
+### dcc keybindings
+^bind ^D parse_command {
+    @:file = pop(a.dcc.offers)
+    @:type = pop(a.dcc.offers)
+    @:from = pop(a.dcc.offers)
+    if (type == [chat]) {
+	dcc chat $from
+    } else {
+	dcc get $from $file
+    }
+}
+
+^bind ^[d parse_command {
+    aecho current dcc offers:
+    fe ($a.dcc.offers) from type file {
+	if (type == [chat]) {
+	    aecho CHAT from $from
+	} else {
+	    aecho GET from $from \($file\)
+	}
+    }
+}
+
+:new format dcc_lost_file
+:form dcc_lost_file arguments @to@ @type@ @file@ @rate@ @reason@
+
+:new format dcc_lost_chat
+:form dcc_lost_chat arguments @to@ @reason@
+
+^on ^exec_exit ^"%dccmv *"
+^on ^dcc_lost * {
+    switch ($1) {
+	(SEND) (GET) {
+	    if (index(/ $2) != -1) {
+		@:file = after(-1 / $2)
+	    } else {
+		@:file = [$2]
+	    }
+	    if (isnumber($3)) {
+		@:rate = [$3]
+		@:reason = tolower($4-)
+	    } else {
+		@:rate = 0
+		@:reason = tolower($3-)
+	    }
+	    aecho $fparse(dcc_lost_file $0-1 $file $rate $reason)
+	}
+	(CHAT) {
+	    aecho $fparse(dcc_lost_chat $0 $tolower($2-))
+	}
+    }
+    if ([$1] == [GET] && reason == [transfer complete]) {
+	@:newfile = file
+	if (a.dcc.dlpath.masks) {
+	    @:i = rmatch($file $a.dcc.dlpath.masks)
+	    if (i) {
+		@:con = word(${i-1} $a.dcc.dlpath.cons)
+		@:newfile = a.dcc.convert_name($con $file)
+	    } elsif (ac.config(dcc_convert)) {
+		@:newfile = a.dcc.convert_name($ac.config(dcc_convert) $file)
+	    }
+	}
+
+	@:i = rmatch($file $a.dcc.dlpath.masks)
+	if (i) {
+	    @:dir = word(${i-1} $a.dcc.dlpath.paths)
+	} else {
+	    @:dir = ac.config(dcc_dldir)
+	}
+	if (dir == []) {
+	    @:dir = [~]
+	}
+	@:dir = twiddle($dir)			
+	@:newfile = [$dir/$newfile]
+
+	^exec -name dccmv mv "$getset(DCC_STORE_PATH)/$^"file" "$^"newfile"
+    } elsif ([$1] == [GET]) {
+	aerrecho transfer for $file didn't complete, leaving it in $apath/tmp
+    }
+}
+
+:new format dcc_list_hdr
+
+:new format dcc_list_file
+:form dcc_list_file arguments @to@ @type@ @status@ @started@ @size@ @sent@ @pct@ @rate@ @file@
+
+:new format dcc_list_chat
+:form dcc_list_chat arguments @to@ @status@ @started@ @sent@
+
+^on ^dcc_list "*" {
+    if ([$3]==[Active]) {
+	@:stat = [act]
+    } else {
+	@:stat = [wait]
+    }
+
+    switch ($0) {
+	(Start) {
+	    a.box.start dcc listing
+	    a.box.echo $fparse(dcc_list_hdr)
+	}
+	(End) {
+	    a.box.end
+	}
+	(CHAT) {
+	    a.box.echo $fparse(dcc_list_chat $2 $stat $4 $6)
+	}
+	(SEND) (GET) {
+	    if (stat == [wait]) {
+		@:pct = 0
+		@:rate = [0b]
+	    } else {
+		@:pct = trunc(2 ${([$6]/[$5])*100})
+		@:s = time() - [$4]
+		@:rate = [$6]
+		@:rate /= s
+		@:rate = ac.size_fmt($rate)
+	    }
+
+	    if (index(/ $7-)!=-1) {
+		@:file = after(-1 / $7-)
+	    } else {
+		@:file = [$7-]
+	    }
+
+	    a.box.echo $fparse(dcc_list_file $2 $0 $stat $4 $5 $6 $pct $rate $file)
+	}
+    }
+}
+
+### some extra bits
+
+:new config dcc_autoget autoget dcc files
+:conf dcc_autoget value 0
+:conf dcc_autoget flags b
+
+:new config dcc_dldir default download directory for files
+:conf dcc_dldir value ~
+:conf dcc_dldir flags wi
+
+:new config dcc_convert default conversion rules for files (see /ahelp dlpath)
+:conf dcc_convert value s
+:conf dcc_convert flags w
+
+mstub a.dcc.convert_name
+
+### below here allows the user to specify specific save paths for 
+### different file masks
+
+:new command dlpath [<mask> <-|path> [conversion flags]]
+:comm dlpath desc set a save path for a download
+:comm dlpath flags i
+:comm dlpath help \
+this command allows for certain types of files to be saved to their own \
+special directories, and have their names converted differently.  the \
+conversion flags are in lowercase, if they are uppercased, they imply an \
+opposite conversion (i.e. s is '%20' -> ' ', S is ' ' -> '%20') the flags \
+are: %n \
+- l %t changes all letters to lowercase %n \
+- s %t change %20 markers to spaces %n \
+- u %t changes underscores to spaces %n \
+with no parameters, the command lists the current mask/path sets and their \
+conversions, if any.  If the path is a -, the mask/path are removed from \
+the list.  Conversion flags are optional, and will default to the \
+'dcc_convert' config setting
+
+mstub dlpath
+
+mstub a.dcc.save
+if (fexist($apath/etc/dcc.paths) != -1) {
+    ^eval load $apath/etc/dcc.paths
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,77 @@
+### $Id: dalnet.stubs,v 1.9 2002/07/25 23:51:04 wd Exp $
+ac.package dalnet
+
+alias autoidentify (nick, pass) {
+    if (nick == []) {
+	a.dalnet.list_ai
+	return
+    }
+
+    if (left(1 $nick) == [-]) {
+	@:nick = after(- $nick)
+	@:remove++
+    }
+
+    @:n = a.dalnet.find_ai($nick)
+
+    if (remove) {
+	if (n != -1) {
+	    @a.dalnet.ai[$n][nick] = 0
+	    aecho removed autoident for $nick
+	    return
+	} else {
+	    aerrecho no such nick $nick
+	    return
+	}
+    }
+
+    while (pass == []) {
+	@:pass = ac.question(enter password for $nick:)
+    }
+
+    a.dalnet.add_ai $nick $pass
+    aecho added autoidentify for $nick
+}
+
+alias a.dalnet.add_ai (nick, pass) {
+    @:n = a.dalnet.ai_count++
+    @a.dalnet.ai[$n][nick] = nick
+    @a.dalnet.ai[$n][pass] = pass
+}
+
+alias a.dalnet.list_ai {
+    a.list.start u 0 auto identify nicks
+    for (@:n = 0, n < a.dalnet.ai_count, @:n++) {
+	if (a.dalnet.ai[$n][nick] != 0) {
+	    a.list.add $a.dalnet.ai[$n][nick]
+	}
+    }
+    a.list.end
+}
+
+alias a.dalnet.save {
+    if (a.dalnet.ai_count <= 0) {
+	### nothing to save
+	return
+    }
+
+    @:fd = a.save.open($apath/etc/dalnet.nicks DALnet autoidentify nicks)
+    if (fd < 0) {return}
+    for (@:n = 0, n < a.dalnet.ai_count, @:n++) {
+	if (a.dalnet.ai[$n][nick] != 0) {
+	    @write($fd a.dalnet.add_ai $a.dalnet.ai[$n][nick] $a.dalnet.ai[$n][pass])
+	}
+    }
+    @close($fd)
+}
+
+alias a.dalnet.find_ai (nick) {
+    for (@:n = 0, n < a.dalnet.ai_count, @:n++) {
+	if (a.dalnet.ai[$n][nick] == nick) {
+	    return $n
+	}
+    }
+    return -1
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

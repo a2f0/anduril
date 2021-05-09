@@ -1,0 +1,40 @@
+### $Id: formats.am,v 1.29 2001/11/03 10:25:52 wd Exp $
+
+:new module formats
+:mod formats version 39
+:mod formats desc format access/modification module
+:mod formats author wd@anduril.org White_Dragon Chip Norkus
+:mod formats depend box usage list
+
+:new command flist [-a] [-m module | -f format_name | word]
+:comm flist desc lists formats availabe for user manipulation
+:comm flist aliases formats
+:comm flist flags i
+:comm flist xref comm:format
+:comm flist help \
+This command has four forms, the first (the -m flag) lists all the \
+available format types within the specified module.  The second (the -f \
+flag) lists all the available formats for a given format type.  The third \
+(no flags) tries to best guess the name you give it, first checking for \
+'important' formats, and then modules, and listing appropriately, \
+depending on what it finds.  The last form displays all 'important' \
+formats.
+
+mstub flist
+
+:new command format <format> [#] [color #]
+:comm format desc sets the current format for format to the specified # (see /flist)
+:comm format aliases fmt
+:comm format flags i
+:comm format xref comm:flist comm:color
+:comm format help \
+Using the numbers given in /flist, you can set the current format for a \
+format to the specified number, or view the current format setting for a \
+format if you do not specify a numerical argument for the setting.  If no \
+arguments are specified, an /flist is performed.  If you pass the additional \
+'color #' arguments, behavior identical to /color # format # will be used \
+if the color module is loaded.
+
+mstub format
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

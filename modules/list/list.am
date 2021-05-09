@@ -1,0 +1,36 @@
+### $Id: list.am,v 1.8 2001/10/28 10:11:55 wd Exp $
+
+:new module list
+:mod list version 24
+:mod list desc module for outputting list data
+:mod list author wd@dal.net White_Dragon Chip Norkus
+:mod list dep box
+
+### numbered list formats
+
+:new format nlist header for numbered lists
+:form nlist slaves nlist_data
+:form nlist arguments @nlen@ @num@ @dlen@ @data@
+
+:new format nlist_data data for numbered lists
+:form nlist_data arguments @nlen@ @num@ @dlen@ @data@
+:form nlist_data flags %
+
+### unnumbered list formats
+
+:new format list header for unnumbered lists
+:form list slaves list_data
+:form list arguments @dlen@ @data@
+
+:new format list_data data for unnumbered lists
+:form list_data arguments @dlen@ @data@
+:form list_data flags %
+
+mstub a.list.start
+mstub a.list.hdr
+mstub a.list.window
+mstub a.list.add
+mstub a.list.end
+mstub a.list.fakemod
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

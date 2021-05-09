@@ -1,0 +1,194 @@
+#############################################################################
+### $Id: util,v 1.16 2002/11/13 19:45:30 wd Exp $
+###
+### utilities
+ac.package
+
+eval load $apath/core/version
+
+alias aecho {
+    xecho -banner $*
+}
+
+alias aerrecho {
+    xecho [E] $*
+}
+
+alias ac.encode {
+    return $encode($tolower($*))
+}
+
+alias ac.hash {
+    return $hash_32bit("$*" 64)
+}
+
+alias ac.size_fmt (n) {
+    if (!n) {
+	return 0b
+    } elsif (n < 1024) {
+	return ${n}b
+    } elsif (n < 1048576) {
+	return $trunc(2 ${n / 1024})kb
+    } elsif (n < 1073741824) {
+	return $trunc(2 ${n / 1048576})mb
+    } elsif (n < 1099511627776) {
+	return $trunc(2 ${n / 1073741824})gb
+    }
+    return $trunc(2 ${n / 1099511627776})tb
+}
+
+### new and fun tdiff functions,
+### they return years (365 day), months (28 day/lunar), and weeks
+### as well as the other nifty things.
+### rtdiff reverses a tdiff(), but only for d/h/m/s, sorry!
+alias tdiff3 (t) {
+    if (t == []) {
+	return 0s
+    }
+	
+    @:y = :m = :w = 0
+    ^local r
+	
+    @:y = floor(${t / 31536000})
+    @:t %= 31536000
+    @:m = floor(${t / 2419200})
+    @:t %= 2419200
+    @:w = floor(${t / 604800})
+    @:t %= 604800
+    @:l = tdiff2($t)
+    
+    if (y) {
+	@:r = [${y}y ]
+    }
+    if (m) {
+	@:r #= [${m}m ]
+    }
+    if (w) {
+	@:r #= [${w}w ]
+    }
+    return $r$l
+}
+
+alias tdiff4 (t) {
+    if (t == []) {
+	return 0s
+    }
+	
+    @:y = :m = :w = 0
+    ^local r
+	
+    @:y = floor(${t / 31536000})
+    @:t %= 31536000
+    @:m = floor(${t / 2419200})
+    @:t %= 2419200
+    @:w = floor(${t / 604800})
+    @:t %= 604800
+    @:l = tr(/ //$tdiff2($t))
+    
+    if (y) {
+	@:r #= [${y}y]
+    }
+    if (m) {
+	@:r #= [${m}m]
+    }
+    if (w) {
+	@:r #= [${w}w]
+    }
+    return $r$l
+}
+
+alias rtdiff (time) {
+    @:ret = 0
+    if (index(d $time) != -1) {
+	@:ret += before(d $time) * 86400
+	@:time = after(d $time)
+    }
+    if (index(h $time) != -1) {
+	@:ret += before(h $time) * 3600
+	@:time = after(h $time)
+    }
+    if (index(m $time) != -1) {
+	@:ret += before(m $time) * 60
+	@:time = after(m $time)
+    }
+    if (index(s $time) != -1) {
+	@:ret ++ before(s $time)
+    } else {
+	@:ret += time
+    }
+
+    return $ret
+}
+
+### this behaves basically like $[x]var, except that
+### it factors ansi codes into the x, so you get x *printable*
+### characters.  Nifty?  Yes.
+### XXX - this function is a SERIOUS beast!
+alias ac.len (len, data) {
+    if (data == []) {
+	@:data = [ ]
+    }
+	
+    if (match(-* $len)) {
+	@:r++
+	@:n = after(- $len)
+    } else {
+	@:n = len
+    }
+    if (!isnumber($n)) {
+	return
+    }
+
+    @:l = strlen($stripcrap(ALL $data))
+    if (l > n) {
+	### there is a bug in 'leftpc' which requires me to subtract one
+	### from any length being given to really get the right number
+	### of characters.  feh.  I sent a fix to hop, so when this
+	### gets fixed, so will the script.
+	### actually, this has been changed from a bug to nonstandard
+	### behavior. ;) (hop calls it a 'feature' ;)
+	return $leftpc(${n-1} $data)
+    } elsif (l < n) {
+	if (r) {
+	    return $repeat(${n-l}  )$data
+	} else {
+	    return $data$repeat(${n-l}  )
+	}
+    }
+    return $data
+}
+
+### a handy quoting function for writing @foo=[bar] statements to files,
+### currently it quotes "$\()[]{}", should it do any others...?
+alias ac.quote_assign {
+    return $^$^\^(^)^[^]^{^}*
+}
+
+### a simple wrapper to $"..." to preserve the prompt in a single global
+### variable
+alias ac.question {
+    @ac.question_prompt = [$*]
+    return $"$ac.question_prompt "
+}
+
+### support for clients without floor/ceil funcs
+if (!fnexist(floor)) {
+    alias floor {
+	if (![$0]) {
+	    return 0
+	}
+	return $before(. $0.)
+    }
+}
+
+if (!fnexist(ceil)) {
+    alias ceil {
+	if (![$0]) {
+	    return 0
+	}
+	return ${before(. $0.)+1}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

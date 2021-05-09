@@ -1,0 +1,3 @@
+@a.completion.add(ignore %N %'ctcps,invites,msgs,notes,notices,public,wallops,crap,all,none)
+@a.completion.alias(ignore tignore pignore unignore)
+

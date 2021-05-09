@@ -1,0 +1,126 @@
+# $Id: msg.general,v 1.1 2003/05/25 01:31:48 wd Exp $
+
+# trace/motd/admin
+@a.server.sfilter.add(notice a.server.general.notice.display)
+
+^on ^oper_notice "% % requested by *" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% LINKS % requested by *" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% STATS % requested by *" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is rehashing *" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is garbage collecting*" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is clearing temp klines*" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is forcing re-reading of MOTD*" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is forcing re-reading of oper MOTD*" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% % is dumping conf file*" {
+    @a.server.sfilter(notice $0 $1-)
+}
+^on ^oper_notice "% * is doing a /whois on you." {
+    @a.server.sfilter(notice $0 $1-)
+}
+
+alias a.server.general.notice.display (type, win, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+    @:by = from
+
+   if (word(0 $msg) == [trace]) {
+	@:nick = word(3 $msg)
+	@:host = strip(() $word(4 $msg))
+	@:server = strip([] $word(5 $msg))
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)trace$(dcol1)]$(ncol): requested: $(col1)$nick $(ncol)$host $(dcol1)[$(ncol)$server$(dcol1)]
+
+    } else if (word(0 $msg) == [motd]) {
+	@:nick = word(3 $msg)
+	@:host = strip(() $word(4 $msg))
+	@:server = strip([] $word(5 $msg))
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)motd$(dcol1)]$(ncol): requested: $(col1)$nick $(ncol)$host $(dcol1)[$(ncol)$server$(dcol1)]
+
+    } else if (word(0 $msg) == [admin]) {
+	@:nick = word(3 $msg)
+	@:host = strip(() $word(4 $msg))
+	@:server = strip([] $word(5 $msg))
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)admin$(dcol1)]$(ncol): requested: $(col1)$nick $(ncol)$host $(dcol1)[$(ncol)$server$(dcol1)]
+
+    } else if (word(0 $msg) == [LINKS]) {
+	@:what = word(1 $msg)
+	@:nick = word(4 $msg)
+	@:host = strip(() $word(5 $msg))
+	@:server = strip([] $word(6 $msg))
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)links$(dcol1)]$(ncol): $what requested: $(col1)$nick $(ncol)$host $(dcol1)[$(ncol)$server$(dcol1)]
+
+    } else if (word(0 $msg) == [STATS]) {
+	@:what = word(1 $msg)
+	@:nick = word(4 $msg)
+	@:host = strip(() $word(5 $msg))
+	@:server = strip([] $word(6 $msg))
+	@:etc = restw(7 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)stats$(dcol1)]$(ncol): $(hcol1)$what $(ncol)requested: $(col1)$nick $(ncol)$host $(dcol1)[$(ncol)$server$(dcol1)] $(ncol)$etc
+
+    } else if (word(2 $msg) == [rehashing]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 2 $msg) == [garbage collecting]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 3 $msg) == [clearing temp klines]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 4 $msg) == [forcing re-reading of MOTD]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 5 $msg) == [forcing re-reading of oper MOTD]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 3 $msg) == [dumping conf file]) {
+	@:nick = word(0 $msg)
+	@:etc = restw(1 $msg)
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)rehash$(dcol1)]$(ncol): $(col1)$nick $(ncol)$etc
+
+    } else if (midw(2 6 $msg) == [is doing a /whois on you.]) {
+	@:nick = word(0 $msg)
+	@:host = strip(() $word(1 $msg))
+
+	a.oper.echo $win $(dcol1)[$(hcol1)notice$(dcol1)/$(hcol1)whois$(dcol1)]$(ncol): $(col1)$nick $(ncol)$host is doing a /whois on you
+
+    }
+}
+
+:module server unset
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

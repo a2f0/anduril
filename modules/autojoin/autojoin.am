@@ -1,0 +1,191 @@
+### $Id: autojoin.am,v 1.14 2004/01/21 07:11:13 wd Exp $
+
+:new module autojoin 
+:mod autojoin version 24
+:mod autojoin desc module for autojoining channels
+:mod autojoin author wd@anduril.org White_Dragon Chip Norkus
+:mod autojoin dep channel network save
+:mod autojoin save_cmd a.autojoin.save
+
+:new config autojoin
+:conf autojoin desc automatically join channels on connect?
+:conf autojoin value 1
+:conf autojoin flags b
+:conf autojoin xref comm:autojoin
+:conf autojoin help \
+this setting allows you to prevent the autojoin module from automatically \
+joining channels in your autojoin list when connecting to a server.  to then \
+join the channels, you can do `/autojoin *`
+
+:new command autojoin
+:comm autojoin syntax [[-][#channel]|*] [network]
+:comm autojoin desc add an autojoin for specified channel
+:comm autojoin aliases ajoin
+:comm autojoin xref conf:autojoin
+:comm autojoin help \
+this command allows the user to add a channel to their autojoin list. \
+the command will ask a series of questions about the channel (although \
+most can be skipped)  the questions are fairly self explanatory.  in \
+addition, to remove an autojoin, the user can prefix the channel \
+with a minus sign (i.e. /autojoin -#wd).  To change a channel's settings, \
+simply execute the comamnd for that channel.  Current settings will be the \
+defaults.  for a list of autojoins, simply execute the command with no \
+arguments.  to perform autojoins for all channels, you can do /autojoin * \
+(or /autojoin * [network] if you want to specify the network)
+
+mstub autojoin
+################################################################################
+
+alias a.autojoin.add (chan, net, window, key) {
+    @:n = a.autojoin.find($chan $net)
+    if (n == -1) {
+	@:n = a.autojoin.count++
+    }
+
+    @a.autojoin[$n][chan] = chan
+    @a.autojoin[$n][net] = net
+    @a.autojoin[$n][window] = window
+    @a.autojoin[$n][key] = key
+}
+
+alias a.autojoin.add_precmd (chan, net, cmd) {
+    @:n = a.autojoin.find($chan $net)
+    if (n == -1) {
+	return
+    }
+    if (cmd == [-]) {
+	^assign -a.autojoin[$n][precmd]
+    } else {
+	@a.autojoin[$n][precmd] = cmd
+    }
+}
+
+alias a.autojoin.add_postcmd (chan, net, cmd) {
+    @:n = a.autojoin.find($chan $net)
+    if (n == -1) {
+	return
+    }
+    if (cmd == [-]) {
+	^assign -a.autojoin[$n][postcmd]
+    } else {
+	@a.autojoin[$n][postcmd] = cmd
+    }
+}
+
+alias a.autojoin.find (chan, net) {
+    for (@:n = 0, n < a.autojoin.count, @:n++) {
+	if (a.autojoin[$n][chan] == chan && a.autojoin[$n][net] == net) {
+	    return $n
+	}
+    }
+
+    return -1
+}
+
+alias a.autojoin.save {
+    @:fd = a.save.open($apath/etc/autojoins autojoins)
+    if (fd == -1) {
+	return
+    }
+    for (@:n = 0, n < a.autojoin.count, @:n++) {
+	if (a.autojoin[$n][chan] != 0) {
+	    @write($fd a.autojoin.add $a.autojoin[$n][chan] $a.autojoin[$n][net] $a.autojoin[$n][window] $a.autojoin[$n][key])
+	    if (a.autojoin[$n][precmd] != []) {
+		@write($fd a.autojoin.add_precmd $a.autojoin[$n][chan] $a.autojoin[$n][net] $a.autojoin[$n][precmd])
+	    }
+	    if (a.autojoin[$n][postcmd] != []) {
+		@write($fd a.autojoin.add_postcmd $a.autojoin[$n][chan] $a.autojoin[$n][net] $a.autojoin[$n][postcmd])
+	    }
+	}
+    }
+    @close($fd)
+}
+
+### hook key changes and automatically update channels as necessary
+^on ^mode_stripped "% % ?k *" {
+    @:net = a.network.get()
+    @:chan = a.autojoin.find($1 $net)
+    if (chan != -1) {
+	if ([$2] == [-k]) {
+	    ^assign -a[autojoin][$chan][key]
+	} else { 
+	    @a.autojoin[$chan][key] = [$3]
+	}
+        aecho updated key for autojoin channel $1 on network $net
+    }
+}
+
+^eval on #-hook $ac.hash(autojoin) "network.connect *" {
+    if (ac.config(autojoin)) {
+	 a.autojoin.do $1
+    }
+}
+
+alias a.autojoin.do (net) {
+    ### for all channels which are on * or on this network, do autojoin stuff
+
+    for (@:n = 0, n < a.autojoin.count, @:n++) {
+	@:cmd = []
+	if (a.autojoin[$n][net] == net || a.autojoin[$n][net] == [*]) {
+	    ### we have a winner.  if there is a pre command, execute that,
+	    ### then set a five second timer to join the channel, otherwise
+	    ### just join the channel (setting the appropriate window as
+	    ### necessary)
+	    @:chan = a.autojoin[$n][chan]
+	    @:net = a.autojoin[$n][net]
+	    @:window = a.autojoin[$n][window]
+	    @:key = a.autojoin[$n][key]
+	    @:precmd = a.autojoin[$n][precmd]
+	    @:postcmd = a.autojoin[$n][postcmd]
+
+	    switch ($window) {
+		(n) {
+		    if (winbound($chan) != []) {
+			@:cmd = [join @chan@]
+		    } else {
+			@:cmd = [//^window new channel "@chan@" bind $chan hide]
+		    }
+		}
+		(0) {
+		    @:cmd = [join @chan@]
+		}
+		(*) {
+		    if (winserv($window) != -1) {
+			if (winserv($window) != lastserver()) {
+			    xecho -w $window Setting this window's server to the network specified in autojoin
+			    //^window $window server $lastserver()
+			}
+			@:cmd = [//^window $window channel "@chan@" bind $chan]
+		    } else {
+			@:cmd = [//^window new number $window channel "@chan@" bind $chan hide]
+		    }
+		}
+	    }
+
+	    if (postcmd) {
+		^eval on ^join '* $chan * *' $(postcmd)\\\;^on ^join -'* $chan * *'
+	    }
+
+	    if (key != []) {
+		@:cmd = sar(/@chan@/$chan $key/$cmd)
+	    } else {
+		@:cmd = sar(/@chan@/$chan/$cmd)
+	    }
+	    if (precmd != []) {
+		### typically a precmd will be used to ask for an invite, trap
+		### that here
+		^eval on ^invite "* $chan *" if \(channel\($chan\) == []\) \{$cmd\}\\\;^on ^invite -"* $chan *"
+		$(a.autojoin[$n][precmd])
+	    } else {
+		$(cmd)
+	    }
+	}
+    }
+}
+
+@a.autojoin.count = 0
+if (fexist($apath/etc/autojoins) != -1) {
+    eval load $apath/etc/autojoins
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

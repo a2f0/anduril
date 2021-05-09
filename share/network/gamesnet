@@ -1,0 +1,11 @@
+# Automatically generated network definition for gamesnet
+
+alias a.network.is_gamesnet {
+	if (match(*.gamesnet.net $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps gamesnet lmohts 30 3 ue

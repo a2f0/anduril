@@ -1,0 +1,236 @@
+### $Id: userlist2.stubs,v 1.4 2003/03/20 17:46:47 wd Exp $
+ac.package userlist2
+
+alias userlist (acct, opts) {
+    if (acct == [*] && opts != [list]) {
+	@usage(userlist)
+	return
+    } elsif (opts == []) {
+	if (acct == []) {
+	    @:acct = [*]
+	}
+	@:opts = [list]
+    }
+
+    # check the account name, and see if it exists
+    if (acct != [*]) {
+	if (pass(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKMNOPQRSTUVWXYZ01234569_ $acct) != acct) {
+	    aerrecho invalid account name $acct
+	    return
+	} elsif (word(0 $opts) != [create] && \
+	    findw($acct $a.userlist.users) == -1) {
+	    aerrecho user $acct does not exist!
+	    return
+	}
+    }
+
+    # $cind is used to see if we've added a channel on this line.  it is the
+    # index of the channel in the list
+    @:cind = -1
+    # set if we already listed the user account.
+    @:listed = 0
+
+    while (opts != []) {
+	if (acct == [*] && word(0 $opts) != [list]) {
+	    aerrecho you can only use the * account when listing
+	    return
+	}
+	switch ($word(0 $opts)) {
+	    (add) (create) {
+		@shift(:opts)
+		@push(a.userlist.users $acct)
+		@a.userlist.user[$acct][flags] = ac.config(default_user_flags)
+	    }
+	    (delete) (destroy) {
+		@shift(:opts)
+		@a.userlist.users = rmew($acct $a.userlist.users)
+		for var in ($aliasctl(assign match a.userlist.user.$acct\.)) {
+		    ^assign -$var
+		}
+		return
+	    }
+	    (addchan) (chan) (channel) {
+		@shift(:opts)
+		if ((:chan = word(0 $opts)) == []) {
+		    aerrecho channel statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		if ((:cind = \
+		    findw($chan $a.userlist.user[$acct][channels])) == -1) {
+		    @push(a.userlist.user[$acct][channels] $chan)
+		    @push(a.userlist.user[$acct][cflags] $a.userlist.user[$acct][flags])
+		    @:cind = numwords($a.userlist.user[$acct][channels]) - 1
+		}
+	    }
+	    (delchan) (rchan) (rchannel) {
+		@shift(:opts)
+		if ((:chan = word(0 $opts)) == []) {
+		    aerrecho rchannel statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		if ((:cind = \
+		    findw($chan $a.userlist.user[$acct][channels])) != -1) {
+		    @a.userlist.user[$acct][channels] = \
+			notw($cind $a.userlist.user[$acct][channels])
+		    @a.userlist.user[$acct][cflags] = \
+			notw($cind $a.userlist.user[$acct][cflags])
+		    @:cind = -1
+		}
+	    }
+	    (flags) {
+		@shift(:opts)
+		if ((:flg = word(0 $opts)) == []) {
+		    aerrecho flags statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		if ((:flg = a.userlist.mkflags($acct $flg)) == []) {
+		    continue
+		}
+		if (cind == -1) {
+		    @a.userlist.user[$acct][flags] = flg
+		} else {
+		    @a.userlist.user[$acct][cflags] = \
+			chngw($cind $flg $a.userlist.user[$acct][cflags])
+		}
+	    }
+	    (addhost) (host) {
+		@shift(:opts)
+		if ((:host = word(0 $opts)) == []) {
+		    aerrecho host statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		@a.userlist.user[$acct][hosts] = \
+		    sort($uniq($a.userlist.user[$acct][hosts] $host))
+	    }
+	    (delhost) (rhost) {
+		@shift(:opts)
+		if ((:host = word(0 $opts)) == []) {
+		    aerrecho rhost statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		@a.userlist.user[$acct][hosts] = \
+		    remw($host $a.userlist.user[$acct][hosts])
+	    }
+	    (list) {
+		@shift(:opts)
+		@:listed = 1
+		if (acct == [*]) {
+		    a.box.start user list
+		    for user in ($a.userlist.users) {
+			a.box.echo $user
+			a.userlist.list $user
+		    }
+		    a.box.end
+		} else {
+		    a.box.start user $acct
+		    a.userlist.list $acct
+		    a.box.end
+		}
+	    }
+	    (pass) (passwd) (password) {
+		@shift(:opts)
+		if ((:pass = word(0 $opts)) == []) {
+		    aerrecho pass statement missing argument
+		    continue
+		} else {
+		    @shift(:opts)
+		}
+		@a.userlist.user[$acct][pass] = pass
+	    }
+	    (*) {
+		aerrecho unknown directive $word(0 $opts)
+		@shift(:opts)
+	    }
+	}
+    }
+
+    # do a list for them if they didn't request one
+    if (acct != [*] && !listed) {
+	userlist $acct list
+    }
+}
+
+alias a.userlist.list (acct) {
+    a.box.echo flags: $a.userlist.user[$acct][flags]
+    if (a.userlist.user[$acct][hosts] != []) {
+	a.list.start hu 0
+	for host in ($a.userlist.user[$acct][hosts]) {
+	    a.list.add $host
+	}
+	a.list.end
+    }
+    if (a.userlist.user[$acct][channels] != []) {
+	a.list.start hu 2
+	a.list.hdr channel
+	a.list.hdr flags
+	@:i = 0
+	for chan in ($a.userlist.user[$acct][channels]) {
+	    a.list.add $chan
+	    a.list.add $word($i $a.userlist.user[$acct][cflags])
+	    @:i++
+	}
+	a.list.end
+    }
+}
+
+# this function takes a list of flags and picks out the bad ones and does
+# expansion on the f, m and * flags.
+alias a.userlist.mkflags (acct, flags) {
+
+    if ((:meta = pass(m* $flags)) != []) {
+	fec ($meta) mfl {
+	    switch ($mfl) {
+		(m) {
+		    @:flags #= [achijopuv]
+		}
+		(*) {
+		    @:flags #= a.userlist.user[$acct][flags]
+		}
+	    }
+	}
+	@:flags = strip(m* $flags)
+    }
+    if ((:inv = strip(abcdhijkopuvw $flags)) != []) {
+	fec ($inv) ifl {
+	    aerrecho $ifl is not a valid user flag
+	}
+	@:flags = pass(abcdfhijkopuvw $flags)
+    }
+
+    # now sort the list and make it unique
+    fec ($flags) fl {
+	@push(:sfl $fl)
+    }
+    @:sfl = sort($uniq($sfl))
+    # check for conflicting entries, too.  w overrides a, o overrides v.
+    # after we've made our list look for b and k and see if they're
+    # conflicting with other stuff
+    if (findw(w $sfl) != -1) {
+	@:sfl = remw(a $sfl)
+    }
+    if (findw(o $sfl) != -1) {
+	@:sfl = remw(v $sfl)
+    }
+    for fl in ($sfl) {
+	@:ofl #= [$fl]
+    }
+    if ((:neg = pass(bdk $ofl)) != [] && \
+	(:pos = pass(fiopuv $ofl)) != []) {
+	aerrecho flags "$neg" don't make sense in combination with "$pos", removing them.
+	@:ofl = strip(bdk $ofl)
+    }
+
+    return $ofl
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

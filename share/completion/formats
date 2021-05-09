@@ -1,0 +1,10 @@
+@a.completion.add(flist -m %"ac.module.list")
+@a.completion.add(flist -f %"ac.format.list")
+@a.completion.add(flist %"ac.format.list,ac.module.list")
+@a.completion.alias(flist formats)
+
+@a.completion.add(format %"ac.format.list" %*)
+@a.completion.alias(format fmt)
+
+@completion.add(finfo %"ac.format.list")
+

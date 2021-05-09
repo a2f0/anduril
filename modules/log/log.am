@@ -1,0 +1,91 @@
+### $Id: log.am,v 1.8 2002/06/18 00:06:49 wd Exp $
+:new module log
+:mod log version 33
+:mod log desc module to handle logging of various data
+:mod log author wd@anduril.org White_Dragon Chip Norkus
+:mod log dep timestamp network modules
+:mod log unload_cmd a.log.cleanup
+:mod log meta timestamp log
+
+### this module is intended as a catch-all replacement for other less
+### versatile logging systems.  to log, all that is needed is one command:
+### @a.log(file|logdes data).  If only 'file' is provided, the system
+### creates its own internal 'log descriptor' with default settings and
+### uses that to maintain state.  alternatively, a module can call
+### 'a.log.open(file [settings])' to create a persistent descriptor for
+### logging.
+
+@a.log.stat.write = a.log.stat.bytes = a.log.des.count = 0
+
+:new config log_directory directory to place logfiles in
+:conf log_directory value $apath/logs
+:conf log_directory flags we
+:conf log_directory xref \
+conf:log_archive_dir conf:log_split_by_network conf:log_directory_mask
+:conf log_directory help \
+this setting determines the base directory for log files.
+
+:new config log_directory_mask permissions to set on the log directory
+:conf log_directory_mask value 0700
+:conf log_directory_mask flags no
+:conf log_directory_mask xref conf:log_directory
+:conf log_directory_mask help \
+this setting specifies the numeric mask to set on the log directory.  the \
+default should be suitable unless you want others to read your logs.
+
+:new config log_split_by_network split logfiles up by network?
+:conf log_split_by_network value 1
+:conf log_split_by_network flags b
+:conf log_split_by_network help \
+this setting, when turned on, splits logfiles up by network, so that \
+they are placed in 'log_directory'/'network'/'category'/file (e.g. \
+~/anduril/logs/efnet/channel/#epic.log)
+
+:new config log_archive archive logfiles?
+:conf log_archive value no
+:conf log_archive flags wi
+:conf log_archive xref conf:log_archive_compress conf:log_archive_dir
+:conf log_archive help \
+this setting causes the client to archive logfiles based on the given value, \
+which can be any of: daily, weekly, monthly, or no.  'no' causes no archival \
+to be done.  daily causes daily archival, done once a day at midnight.  \
+weekly archival occurs at midnight on Monday every week.  monthly archival \
+occurs on the first of every month at midnight.  the script makes every \
+attempt to avoid trouncing the logfiles or doing things otherwise poorly, but \
+no gaurantees are made!  also, the archiver assumes you have tar installed \
+and available.  if this isn't the case, don't use it!
+
+:new config log_archive_compress compress archived logfiles?
+:conf log_archive_compress value n
+:conf log_archive_compress flags w
+:conf log_archive_compress xref conf:log_archive
+:conf log_archive_compress help \
+this config allows you to compress the tarred up log archives.  it can be one \
+of 'b', 'z', or 'n'.  b means 'use bzip2', 'z' means 'use gzip', and 'n' \
+means 'don't archive'.  this setting requires that you have GNU tar, or \
+a tar that supports 'zxf' flags.
+
+:new config log_archive_dir directory in which to place archived logs
+:conf log_archive_dir value $apath/archives
+:conf log_archive_dir flags wie
+:conf log_archive_dir xref conf:log_directory conf:log_archive
+:conf log_archive_dir help \
+this setting allows you to specify where to place archived log tarballs.  \
+this should *never* be within the logs directory itself!
+
+:new command logstat
+:comm logstat desc provides statistics on the logging system
+:comm logstat help \
+this command simply provides a variety of interesting information on \
+the state of the logging system.  currently this is how many logs are opne \
+vs. how many log descriptors there are, and how much has been written to \
+disk so far in logs.
+
+### stubs from here on down, see the stubs file for info
+mstub logstat
+mstub a.log.open
+mstub a.log.close
+mstub a.log
+mstub a.log.clean
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

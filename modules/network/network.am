@@ -1,0 +1,326 @@
+### $Id: network.am,v 1.33 2004/01/21 07:11:13 wd Exp $
+
+:new module network
+:mod network version 91
+:mod network desc a module for determining what network you're on
+:mod network author wd@anduril.org White_Dragon Chip Norkus
+:mod network dep usage
+
+alias a.network.load {
+    fe ($sar(g=.list==$glob($apath/share/network/*.list))) xx {
+	@:n = after(-1 / $xx)
+	@:fd = open(${xx}.list R)
+	if (fd >= 0) {
+	    while (!eof($fd)) {
+		@a.network.$(n).list #= [$read($fd) ]
+	    }
+	    @close($fd)
+	}
+	@a.network.list #= [$n ]
+	^load $xx
+    }
+}
+
+alias a.network.caps {
+    if ([$1] == []) {
+	return
+    }
+	
+    @:n = [$0]
+    if (![$(a.network.$(n).list)]) {
+	return
+    }
+
+    @:a = [$2-]
+	
+    fec ($1) c {
+	switch ($c) {
+	    (h) {
+		if (a) {
+		    @a.network.$(n).cap[h] = shift(a)
+		    @a.network.$(n).caps #= [ h]
+		}
+	    }
+	    (l) {
+		if (a) {
+		    @a.network.$(n).cap[l] = shift(a)
+		    @a.network.$(n).caps #= [ l]
+		}
+	    }
+	    (m) {
+		if (a) {
+		    @a.network.$(n).cap[m] = shift(a)
+		    @a.network.$(n).caps #= [ m]
+		}
+	    }
+	    (o) {
+		if (a) {
+		    @a.network.$(n).cap[o] = shift(a)
+		    @a.network.$(n).caps #= [ o]
+		}
+	    }
+	    (s) (t) (w) {
+		@a.network.$(n).cap[$c] = 1
+		@a.network.$(n).caps #= [ $c]
+	    }
+	    (x) {
+		@a.network.$(n).cap[x] = 1
+		@a.network.$(n).caps #= [ $c]
+	    }
+	}
+    }
+}
+
+alias a.network.get (server) {
+    if ((:net = serverctl(get $servernum($server) group)) != [<default>]) {
+	return $net
+    } elsif ((:net = serverctl(get $servernum($server) 005 NETWORK)) != []) {
+	return $net
+    }
+
+    if (server == []) {
+	@:server = builtin_expando(S)
+    }
+    @:version = serverctl(get $servernum($server) VERSION)
+
+    # search the list for a match..
+    fe ($a.network.list) xx {
+	if ([$(a.network.is_$(xx)($server $version))]) {
+	    return $xx
+	}
+    }
+
+    ### if we're still out of luck, return nothing.
+    return
+}
+
+alias a.network.get_cap (cap, net) {
+    @:net = net != [] ? net : a.network.get()
+    @:x = [$(a.network.$(net).cap[$cap])]
+    ### if the value is empty, return something more appropriate as necessary
+    if (x == []) {
+	switch ($cap) {
+	    (h) {
+		@:x = [e]
+	    }
+	    (l) {
+		@:x = 9
+	    }
+	    (m) {
+		@:x = 3
+	    }
+	    (o) {
+		@:x = [e]
+	    }
+	}
+    }
+
+    return $x
+}
+
+alias a.network.get_caps return $(a.network.$(0).caps)
+alias a.network.get_list return $(a.network.$(0).list)
+
+### this function makes servernames 'shorthand' if possible
+### it is passed the network and servername
+alias a.network.gss {
+    if (index(. $*) == -1) {
+	return $*
+    }
+
+    @:net = a.network.get()
+    if (a.network.get_cap(t $net)) {
+	fe ($*) xx {
+	    @push(function_return $before(. $xx))
+	}
+	return
+    } else {
+	return $*
+    }
+}
+
+alias a.network.save_list {
+    @:net = tolower($0)
+
+    if (!a.network.get_list($net)) {
+	return
+    }
+
+    @:file = [$apath/share/network/${net}.list]
+    @unlink($file)
+    @:fd = open($file W)
+
+    if (fd >= 0) {
+	fe ($a.network.get_list($net)) xx {
+	    @write($fd $xx)
+	}
+	@close($fd)
+    }
+}
+
+:new format network_info displayed when network type for a server is determined
+:form network_info arguments @server@ @version@ @network@
+
+# We have to devise a rather weird solution for this.  We'd like to have 005
+# when we connect, but some servers still don't send 005 (..ugh) so we work
+# around it like this:
+
+^eval on #-004 $ac.hash(network) "*" {
+    ^eval on #-005 $ac.hash(network) "$builtin_expando(S) *" a.network.newserver
+    ^eval on #-251 $ac.hash(network) "$builtin_expando(S) *" a.network.newserver
+}
+
+alias a.network.newserver {
+    ^eval on #-005 $ac.hash(network) -"$builtin_expando(S) *"
+    ^eval on #-251 $ac.hash(network) -"$builtin_expando(S) *"
+
+    @:n = a.network.get()
+    if (n) {
+	if (fexist($apath/modules/$n/$n.am)!=-1) {
+	    @ac.module.load($n depend (network))
+	}
+	aecho $fparse(network_info $builtin_expando(S) $builtin_expando(R) $n)
+	hook network.connect $n
+	@serverctl(set $servernum() group $n)
+    } else {
+	aerrecho network type for server $builtin_expando(S) unknown
+    }
+}
+
+:new command ninfo [network]
+:comm ninfo desc provides information on a network
+:comm ninfo help \
+this command provides information on the specified network (or current if \
+none is specified).  If the module has information on the specified \
+network, it lists any special cabailities known, and how many servers are \
+known to be on the network
+
+alias ninfo {
+    if ([$0] == []) {
+	@:n = a.network.get()
+	if (!n) {
+	    aerrecho network for current server is unknown!
+	    return
+	}
+    } else {
+	if ([$(a.network.$(0).list)]) {
+	    @:n=[$0]
+	} else {
+	    aerrecho no such network $0!
+	    return
+	}
+    }
+	
+    fe ($(a.network.$(n).caps)) xx {
+	switch ($xx) {
+	    (l) {
+		@:caps#=[nick length: $(a.network.$(n).cap[l]), ]
+	    }
+	    (m) {
+		@:caps#=[# of modes: $(a.network.$(n).cap[m]), ]
+	    }
+	    (s) {
+		@:caps#=[has services, ]
+	    }
+	    (w) {
+		@:caps#=[has WATCH, ]
+	    }
+	}
+    }
+	
+    @caps=before(-1 , $caps)
+		
+    a.box.start network $n
+    if (caps) {
+	a.box.echo $caps
+    }
+    a.box.echo $numwords($(a.network.$(n).list)) servers in list
+    a.box.end
+}
+
+:new command newnetwork <network>
+:comm newnetwork desc allows the user to create a new network definition
+:comm newnetwork aliases newnet
+:comm newnetwork help \
+this is a simple interface to the network detection capabilities of the \
+module.  it allows the user to quickly and easily define a network based \
+on characteristics of the current server.  the user will be presented with \
+a list of options by which the network can be defined, and options for \
+the network's capabilities.  this command currently does not handle \
+'likenesses' for networks, and network definitions cannot be edited via \
+the script.  simply use /newnetwork <nameofnetwork> and answer the \
+questions
+
+mstub newnetwork
+
+:new command nlist [[-s <network>]|[network]]
+:comm nlist desc displays or saves a list of servers on a network
+:comm nlist help \
+this command displays a list of servers on the current (or specified) \
+network (taken from internal data), or with the -s flag, updates that \
+internal data with a listing pulled from the current server.  The network \
+name is required with the -s flag, use all lowercase for it.
+
+alias nlist {
+    if ([$0] == [-s]) {
+	if (![$1]) {
+	    @usage(nlist)
+	    return
+	}
+	@:save = 1
+	@:net = [$1]
+    } else {
+	if ([$0]) {
+	    @:net = [$0]
+	} else {
+	    @:net = a.network.get()
+	}
+    }
+	
+    if (!net) {
+	aerrecho cannot determine current network
+	return
+    }
+	
+    if (!a.network.get_list($net) && !save) {
+	aerrecho network $net has no server listing
+	return
+    }
+	
+    if (save) {
+	@a.network.$(net).list = []
+	^alias a.network.savelink {
+	    @a.network.$(0).list #= [$1 ]
+	}
+	^eval on ^364 "$builtin_expando(S) *" a.network.savelink $net $$$$1
+	^alias a.network.savedone {
+	    ^on 364 -"$builtin_expando(S) *"
+	    ^on 365 -"$builtin_expando(S) *"
+	    a.network.save_list $0
+	    aecho saved network list for $0
+	    ^alias -a.network.savelink
+	    ^alias -a.network.savedone
+	}
+	^eval on ^365 "$builtin_expando(S) *" a.network.savedone $net
+	aecho retrieving network list for $net ...
+	//links
+	return
+    }
+	
+    a.list.start u 0 servers for network $net
+    fe ($a.network.get_list($net)) xx {
+	a.list.add $xx
+    }
+    a.list.end
+}
+
+a.network.load
+
+for xx in ($myservers(refnums)) {
+    @:n = a.network.get($serverctl(get $xx itsname))
+    if (n != []) {
+	@serverctl(set $xx group $n)
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

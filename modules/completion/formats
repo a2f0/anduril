@@ -1,0 +1,10 @@
+# formats for type nick_comp_string
+ac.format.add     nick_comp_string @nick@:%N
+ac.format.add     nick_comp_string @nick@:%N
+ac.format.add     nick_comp_string @nick@:%N
+# ---
+
+# formats for type comp_match
+ac.format.add           comp_match %K[%n${strlen(@item@)>22 ? [.. $right(19 @item@)] : [$pad(22 " " @item@)]}%K]%n
+# ---
+

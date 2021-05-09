@@ -1,0 +1,4 @@
+# formats for type asave_message
+ac.format.add        asave_message saving @contents@ to $(hcol2)@file@ $(dcol2)...
+# ---
+

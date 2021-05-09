@@ -1,0 +1,54 @@
+------------------------------------------------------------------------------ 
+$Id: config,v 1.8 2001/10/28 10:11:50 wd Exp $
+------------------------------------------------------------------------------
+
+[IMPORTANT NOTE]: the behavior of the config changer is dependant completely   
+on implementation.  The config module that comes with anduril is compliant     
+with all specifications below.
+
+Configuration is the last element of an anduril module.   It's very simple,
+so I'll just explain the commands below.  They all need to be in a
+#:module/#:!module block.  As with formats, they can be in a
+#:command/#:!command block.  Similarly, config names will be cut off at 20
+characters.
+
+This is another block of data.
+
+:new conf <name> [description]
+ - Starts the config block, name is the name of the configuration item
+   unique to the module.  description is an optional description of what
+   the variable is
+
+:conf <name> desc <description of config>
+ - Specifies description of the configuration item
+
+:conf <name> flags <flags>
+ - b: boolean, this implies a ((yes|no)|(true|false)|(on|off)) answer
+ - i: important, same as for modules and formats
+ - n: numeric, this implies a numeric answer
+      - optional extra flags: o, x (for octal or hexadecimal numbers)
+ - w: word, this implies a one word answer
+ - s: string, this implies a string (multiword) answer
+ - t: skinnable (themeable).  this specifies that a config is suitable to
+      be saved in a skin as a 'behavioral' item.
+ - NB: the types b, n, w, and s are all used for in-house input
+       checking/certification, this is just to make your life easier.
+
+:conf <name> input_command <alias>
+ - This allows you to use an input system other than the default to input
+   the variable.  Er, actually this doesn't work.  let me know if you want it!
+
+:conf <name> value <value>
+ - this allows you to set a default value for the variable
+
+:conf <name> change_cmd <command>
+ - this is called whenever the value of the config is changed, in the manner of:
+   /change_cmd <configname> <oldvalue>
+   NB: this is called WHENEVER the value of a config is set, even if there is no
+       change, and whenever the module is loaded
+   NBx2: the reason we pass the old value is incase you need to compare the new
+         one (easily retrieved) against the old one.  However, this is not
+         gauranteed to exist, so you need to expect this!
+         
+:conf <name> xref <stuff>
+ - see the information in the 'command' file about cross-references 

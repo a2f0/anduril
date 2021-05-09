@@ -1,0 +1,17 @@
+### $Id: less.am,v 1.2 2001/03/08 04:18:20 wd Exp $
+
+:new module less
+:mod less version 5
+:mod less desc a less-like pager for viewing files
+:mod less author wd@anduril.org White_Dragon Chip Norkus
+:mod less depend
+
+:new command less <file>
+:comm less desc pages through the specified file
+:comm less help \
+this command behaves like the shell command more (or less), it displays \
+a file one screen-full at a time
+
+mstub less
+
+# vim: syntax=off ts=3 ai smartindent

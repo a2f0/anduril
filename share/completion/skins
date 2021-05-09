@@ -1,0 +1,8 @@
+@a.completion.add(slist)
+@a.completion.alias(slist skins themes)
+
+@a.completion.add(skin %"a.skins.list"*)
+@a.completion.alias(skin sload theme)
+
+@a.completion.add(ssave)
+

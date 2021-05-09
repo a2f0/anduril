@@ -1,0 +1,34 @@
+### $Id: dict.am,v 1.4 2001/08/20 14:11:59 wd Exp $
+
+:new module dict
+:mod dict version 11
+:mod dict desc dictionary server query tool
+:mod dict author wd@anduril.org White_Dragon Chip Norkus
+:mod dict dep box
+
+:new command define [-1avr] [-d database] [-m matchtype] [word]
+:comm define desc command to query a dictionary server
+:comm define flags i
+:comm define aliases dict
+:comm define help \
+this command performs a query on the user specified dictionary server. \
+by default (with no arguments) it queries the word given on the command \
+line. several flags are available: -v queries the server for its version \
+and available databases. -r performs a raw query (see RFC2229) and returns \
+the results. The user may specify a preference to return all or only the \
+first word found by the server, this may be overriden with the -1 (first) \
+and -a (all) options respectively. the -d and -m arguments may be used if \
+desired to set a specific database or match type, they are not necessary. \
+see also: /config dict_server|dict_qtype
+
+:new config dict_server server to use for dictionary queries (server[:port])
+:conf dict_server value dict.org:2628
+:conf dict_server flags w
+
+:new config dict_qtype desired definition response (1/one = first, a/all = all)
+:conf dict_qtype value all
+:conf dict_qtype flags w
+
+mstub define
+# vim: syntax=off ts=3 ai smartindent
+

@@ -1,0 +1,783 @@
+### $Id: channel.stubs,v 1.34 2003/11/12 03:10:48 wd Exp $
+ac.package channel
+
+alias join {
+    if ([$0] == []) {
+	@usage(join)
+	return
+    } else {
+	@:c = a.chan_fixname($0)
+	if (channel($c) == [] && winbound($c) != winnum() && \
+                winbound($c) != -1) {
+	    window $winbound($c) channel "$c $1-"
+	} else {
+	    //join $c $1-
+	}
+    }
+}
+
+alias part {
+    if (![$0]) {
+	@:c = builtin_expando(C)
+    } else {
+	@:c = [$0]
+    }
+    @:r = [$1-]
+    if (!r) {
+	@:r = ac.config(part_msg)
+	if (!r) {
+	    if (ac.config(random_part)) {
+		@:r = randread($apath/share/reasons/part)
+	    }
+	}
+    }
+    //part $a.chan_fixname($c) $r
+}
+
+alias cycle {
+    if (![$0]) {
+	@:c = builtin_expando(C)
+    } else {
+	@:c = [$0]
+    }
+    @:k = key($c)
+
+    part $a.chan_fixname($c) cycle
+    wait
+    join $a.chan_fixname($c) $k
+}
+
+alias mode {
+    if (![$0]) {
+	@usage(mode)
+	return
+    } else {
+	if (ischannel($0)) {
+	    //mode $*
+	} else {
+	    //mode $*
+	}
+    }
+}
+
+alias op {
+    @:line = [$*]
+    if (ischannel($0)) {
+	@:c = shift(line)
+    } else {
+	@:c = builtin_expando(C)
+    }
+
+    @:x = a.network.get_cap(m)
+    while (line != []) {
+	//^mode $c +$repeat(${#line < x ? #line : x} o) $leftw($x $line)
+	@:line = restw($x $line)
+    }
+}
+
+alias mop {
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    if (f == []) {
+	@:f = [-o-n+n $servernick() *]
+    } else {
+	@:f = [-o-n+$word(0 $f) $servernick() $restw(1 $f)]
+    }
+
+    @:x = a.network.get_cap(m)
+    @:mask = a.channel.filter($c $f)
+    while (mask != []) {
+	//^mode $c +$repeat(${#mask < x ? #mask : x} o) $leftw($x $mask)
+	@:mask = restw($x $mask)
+    }
+}
+
+alias deop {
+    @:line = [$*]
+    if (ischannel($0)) {
+	@:c = shift(line)
+    } else {
+	@:c = builtin_expando(C)
+    }
+
+    @:x = a.network.get_cap(m)
+    while (line != []) {
+	//^mode $c -$repeat(${#line < x ? #line : x} o) $leftw($x $line)
+	@:line = restw($x $line)
+    }
+}
+
+alias mdeop {
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    if (f == []) {
+	@:f = [+o-n+n $servernick() *]
+    } else {
+	@:f = [+o-n+$word(0 $f) $servernick() $restw(1 $f)]
+    }	
+
+    @:x = a.network.get_cap(m)
+    @:mask = a.channel.filter($c $f)
+    while (mask != []) {
+	//^mode $c -$repeat(${#mask < x ? #mask : x} o) $leftw($x $mask)
+	@:mask = restw($x $mask)
+    }
+}
+
+alias voice {
+    @:line = [$*]
+    if (ischannel($0)) {
+	@:c = shift(line)
+    } else {
+	@:c = builtin_expando(C)
+    }
+
+    @:x = a.network.get_cap(m)
+    while (line != []) {
+	//^mode $c +$repeat(${#line < x ? #line : x} v) $leftw($x $line)
+	@:line = restw($x $line)
+    }
+}
+
+alias mvoice {
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    if (f == []) {
+	@:f = [-v-n+n $servernick() *]
+    } else {
+	@:f = [-v-n+$word(0 $f) $servernick() $restw(1 $f)]
+    }	
+
+    @:x = a.network.get_cap(m)
+    @:mask = a.channel.filter($c $f)
+    while (mask != []) {
+	//^mode $c +$repeat(${#mask < x ? #mask : x} v) $leftw($x $mask)
+	@:mask = restw($x $mask)
+    }
+}
+
+alias devoice {
+    @:line = [$*]
+    if (ischannel($0)) {
+	@:c = shift(line)
+    } else {
+	@:c = builtin_expando(C)
+    }
+
+    @:x = a.network.get_cap(m)
+    while (line != []) {
+	//^mode $c -$repeat(${#line < x ? #line : x} v) $leftw($x $line)
+	@:line = restw($x $line)
+    }
+}
+
+alias mdevoice {
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    if (f == []) {
+	@:f = [+v-n+n $servernick() *]
+    } else {
+	@:f = [+v-n+$word(0 $f) $servernick() $restw(1 $f)]
+    }
+
+    @:x = a.network.get_cap(m)
+    @:mask = a.channel.filter($c $f)
+    while (mask != []) {
+	//^mode $c -$repeat(${#mask < x ? #mask : x} v) $leftw($x $mask)
+	@:mask = restw($x $mask)
+    }
+}
+
+alias tban (time, args) {
+    if (args == [] || !isnumber($time)) {
+	@usage(tban)
+	return
+    }
+    @a.channel.bantime = time
+    ban $args
+}
+
+alias ban {
+    if ([$0] == []) {
+	@usage(ban)
+    }
+    @:line = [$*]
+    if (ischannel($0)) {
+	@:c = shift(line)
+    } else {
+	@:c = builtin_expando(C)
+    }
+
+    @:i = 0
+    fe ($line) xx {
+	if (userhost($xx)!=[<UNKNOWN>@<UNKNOWN>]) {
+	    @push(:mask $mask($ac.config(ban_mask) $xx!$userhost($xx)))
+	} elsif (index(! $xx)!=[-1] && index(@ $xx)!=[-1]) {
+	    @push(:mask $xx)
+	} else {
+	    userhost $xx -cmd {
+		if ([$3] != [<UNKNOWN>]) {
+		    ban $mask($ac.config(ban_mask) $0\!$3\@$4)
+		} else {
+		    aerrecho could not find nick $0
+		}
+	    }
+	}
+    }
+
+    if (ac.config(ban_time) && a.channel.bantime == []) {
+	 @a.channel.bantime = ac.config(ban_time)
+    }
+    @:x = a.network.get_cap(m)
+    while (mask != []) {
+	@:line = [$repeat(${#mask < x ? #mask : x} b) $leftw($x $mask)]
+	//^mode $c +$line
+	if (a.channel.bantime) {
+	    //^timer ${a.channel.bantime * 60} xeval -s $winserv() mode $c -$line
+	}
+	@:mask = restw($x $mask)
+    }
+     ^assign -a.channel.bantime
+}
+
+alias banstat (chan) {
+    if (chan == []) {
+	@:chan = builtin_expando(C)
+    }
+
+    if (chan == []) {
+	aerrecho no current channel!
+	return
+    }
+
+    a.list.start n 3 bans for channel $chan
+    a.list.hdr ban
+    a.list.hdr by
+    a.list.hdr delta
+    ^on ^367 * {
+	a.list.add $2
+	if (index(! $3) != -1) {
+	    a.list.add $before(! $3)
+	} else {
+	    a.list.add $3
+	}
+	@:tset = time()
+	@:tset -= [$4]
+	a.list.add $tdiff3($tset)
+    }
+    ^on ^368 "*" {a.list.end $1 bans}
+    mode $chan +b
+    wait
+    ^on 367 -*
+    ^on 368 -*
+}
+
+alias unban (chan, masks) {
+    if (chan == []) {
+	@:c = builtin_expando(C)
+	@:l = []
+    } elsif (ischannel($chan)) {
+	@:c = chan
+	@:l = masks
+    } else {
+	@:c = builtin_expando(C)
+	@:l = [$chan $masks]
+    }
+
+    ^assign -a.channel.ban.unlist
+    @a.channel.ban.list = []
+    ^on ^367 * {@push(a.channel.ban.list $2)}
+    ^on ^368 ^"*"
+    mode $c +b
+    wait
+    ^on 367 -*
+    ^on 368 -*
+
+    if (a.channel.ban.list == []) return
+
+    if (l == []) {
+	@a.channel.ban.unlist = a.channel.ban.list
+    } else {
+	### collect their list
+	fe ($l) xx {
+	    if (isnumber($xx)) {
+		if (xx <= 0 || numwords($a.channel.ban.list) < xx) {
+		    aerrecho $xx is not a valid ban index
+		    continue
+		}
+		@push(a.channel.ban.unbanlit $word(${xx - 1} $a.channel.ban.list))
+	    } else if (index(! $xx) == -1 && index(@ $xx) == -1) {
+		userhost $xx -cmd {
+		    if ([$3] != [<UNKNOWN>]) {
+			@push(a.channel.ban.unbanchk $0!$3@$4)
+		    } else {
+			aerrecho couldn't find user $0
+		    }
+		}
+		wait
+	    } else {
+		@push(a.channel.ban.unbanlit $xx)
+	    }
+	}
+
+	### now make a list of things to unban
+	fe ($a.channel.ban.unbanchk) xx {
+	    fe ($a.channel.ban.list) yy {
+		if (match($yy $xx)) {
+		    @push(a.channel.ban.unlist $yy)
+		}
+	    }
+	}
+	^assign -a.channel.ban.unbanchk
+
+	@push(a.channel.ban.unlist $a.channel.ban.unbanlit)
+	^assign -a.channel.ban.unbanlit
+    }
+    @a.channel.ban.unlist = uniq($a.channel.ban.unlist)
+    @:i = 0
+    @:x = a.network.get_cap(m)
+
+    while (i < [$#a.channel.ban.unlist]) {
+	@push(:mask $word($i $a.channel.ban.unlist))
+	@:i++
+	if (i % x == 0) {
+	    //^mode $c -$repeat(${#mask < x ? #mask : x} b) $leftw($x $mask)
+	    @:mask = []
+	}
+    }
+    if (mask != []) {
+	//mode $c -$repeat($#mask b) $mask
+    }
+    ^assign -a.channel.ban.unlist
+    ^assign -a.channel.ban.list
+}
+
+alias kick {
+    if (![$0]) {
+	@usage(kick)
+	return
+    }
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:n = [$1]
+	@:r = [$2-]
+    } else {
+	@:c = builtin_expando(C)
+	@:n = [$0]
+	@:r = [$1-]
+    }
+
+    if (r==[]) {
+	@:r = ac.config(kick_msg)
+	if (r==[] && ac.config(random_kick)) {
+	    @:r = randread($apath/share/reasons/kick)
+	}
+    }
+
+    //kick $c $n $r
+}
+
+alias tbk (time, args) {
+    if (args == [] || !isnumber($time)) {
+	@usage(tbk)
+	return
+    }
+    @a.channel.bantime = time
+    bankick $args
+}
+
+alias bankick {
+    if (![$0]) {
+	@usage(bankick)
+	return
+    }
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:n = [$1]
+	@:r = [$2-]
+    } else {
+	@:c = builtin_expando(C)
+	@:n = [$0]
+	@:r = [$1-]
+    }
+
+    ban $c $sar(g/,/ /$n)
+    kick $c $n $r
+}
+
+alias invite {
+    if (![$1]) {
+	@:c = builtin_expando(C)
+    } else {
+	@:c = [$1]
+    }
+
+    //invite $0 $c
+}
+
+alias a.channel.wall {
+    if ([$0] == []) {
+	@usage(wall)
+	return
+    }
+
+    @:walltype = a.network.get_cap(o)
+
+    @:n = fparse(wall $builtin_expando(C) $*)
+    switch ($walltype) {
+	(e) {
+	    ### lovely.  we can only send one at a time.  EFnet's anti-spam
+	    ### measures make this necessary.  how stupid.
+	    if (pass(o $a.channel.wall) != []) {
+		@push(:list $chops($builtin_expando(C)))
+	    }
+	    if (pass(v $a.channel.wall) != []) {
+		@push(:list $strip(.?+ $pattern(.+* $channel($builtin_expando(C)))))
+	    }
+	    for xx in ($list) {
+		//^notice $xx $n
+	    }
+	}
+	(d) {
+	    if (pass(o $a.channel.wall) != []) {
+		@:list = [@]
+	    }
+	    if (pass(v $a.channel.wall) != []) {
+		@:list #= [+]
+	    }
+	    //^quote NOTICE $list$builtin_expando(C) :$n
+	}
+	(u) {
+	    if (pass(o $a.channel.wall) != []) {
+		//^wallchops $builtin_expando(C) $n
+	    }
+	    # yuck.  EFnet style.  Not cool.
+	    if (pass(v $a.channel.wall) != []) {
+		for xx in ($strip(.?+ $pattern(.+* $channel($builtin_expando(C))))) {
+		    //^notice $xx $n
+		}
+	    }
+	}
+    }
+
+    echo $a.timestamp(channel ts b)$n
+    @a.chan_log($builtin_expando(C) $n)
+}
+
+alias topic {
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:t = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:t = [$*]
+    }
+
+    //topic $c $t
+}
+
+alias ame {
+    if (![$0]) {
+	@usage(ame)
+	return
+    }
+    fe ($mychannels()) xx {
+	//describe $xx $*
+    }
+}
+
+alias asay {
+    if (![$0]) {
+	@usage(asay)
+	return
+    }
+    fe ($mychannels()) xx {
+	//msg $xx $*
+    }
+}
+
+alias filterkick {
+    if ([$0] == []) {
+	@usage(filterkick)
+	return
+    }
+
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    @:r = [filter kick: $f]
+    if (f == []) {
+	aerrecho no filter used, this probably isn't what you want.
+    } else {
+	@:f = [-n+$word(0 $f) $servernick() $restw(1 $f)]
+    }
+
+    fe ($a.channel.filter($c $f)) xx {
+	kick $c $xx filter kick: $r
+    }
+}
+
+alias filter {
+    if ([$0] == []) {
+	@usage(filter)
+	return
+    }
+
+    if (ischannel($0)) {
+	@:c = [$0]
+	@:f = [$1-]
+    } else {
+	@:c = builtin_expando(C)
+	@:f = [$*]
+    }
+    if (f == []) {
+	@:f = [+n *]
+    }
+
+    aecho filter '$f' matches:
+    aecho $a.channel.filter($c $f)
+}
+
+alias a.channel.filter (chan, filter, args) {
+    @a.channel.filter.chan = chan
+    @a.channel.filter.filter = filter
+    @a.channel.filter.args = args
+    @a.channel.filter.list = []
+
+    //who $chan -line {a.channel.filter.who $*} -end {}
+    wait
+    return $a.channel.filter.list
+}
+
+alias a.channel.filter.who (whochan, whonick, whostat, whouser, whohost, whoserv, whohop, whoreal) {
+    @:chan = a.channel.filter.chan
+    @:filter = a.channel.filter.filter
+    @:args = a.channel.filter.args
+    @:plus = 1
+
+    # for each character in filter, weed some stuff
+    # out of the list
+    fec ($filter) xx {
+	switch ($xx) {
+	    (+) {
+		@:plus = 1
+	    }
+	    (-) {
+		@:plus = 0
+	    }
+	    (a) {
+		if (pass(G $whostat) == [G]) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (g) {
+		if (args == []) {
+		    continue
+		}
+		if (match("$args" "$whoreal")) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+		@:args = []
+	    }
+	    (h) {
+		if (args == []) {
+		    continue
+		}
+
+		@:w = word(0 $args)
+		@:args = restw(1 $args)
+
+		if (match($w $whohost)) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (m) {
+		if (args == []) {
+		    continue
+		}
+
+		@:w = word(0 $args)
+		@:args = restw(1 $args)
+
+		if (match($w $whonick!$whouser@$whohost)) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (n) {
+		if (args == []) {
+		    continue
+		}
+
+		@:w = word(0 $args)
+		@:args = restw(1 $args)
+
+		if (match($w $whonick)) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (o) {
+		if (pass(@ $whostat) != []) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (s) {
+		if (args == []) {
+		    continue
+		}
+
+		@:w = word(0 $args)
+		@:args = restw(1 $args)
+
+		if (match($w $whoserv)) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (u) {
+		if (args == []) {
+		    continue
+		}
+
+		@:w = word(0 $args)
+		@:args = restw(1 $args)
+
+		if (match($w $whouser)) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (v) {
+		if (pass(+ $whostat) != []) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	    (*) {
+		if (pass(* $whostat) != []) {
+		    if (!plus) {
+			return
+		    }
+		} elsif (plus) {
+		    return
+		}
+	    }
+	}
+    }
+
+    @push(a.channel.filter.list $whonick)
+}
+
+alias a.channel.align (nick, channel) {
+    @:type = ac.config(align_public)
+    @a.channel.align.left = a.channel.align.right = []
+    switch ($type) {
+	(on) {
+	    @:type = [right]
+	}
+	(left) (right) {}
+	(*) {
+	    return
+	}
+    }
+
+    @:plus = ac.config(show_ops_in_msgs)
+    @:min = ac.config(align_public_min) + plus
+    @:max = ac.config(align_public_max) + plus
+    @:clen = maxlen($chanusers($channel)) + plus
+    @:nlen = strlen($nick)
+
+    if (clen < max) {
+	@:len = clen
+    } else {
+	@:len = max
+    }
+
+    if (len < min) {
+	@:len = min
+    }
+    stack push set indent
+    stack push set continued_line
+    switch ($type) {
+	(left) {
+	    @a.channel.align.right = repeat(${len - nlen}  )
+	}
+	(right) {
+	    @a.channel.align.left = repeat(${len - nlen}  )
+	}
+    }
+
+    @:str = fparse(public)
+    if (findw(public $ac.config(timestamp)) != -1) {
+	@:str #= [ $a.timestamp(1)]
+    }
+    //^set indent off
+    //^set continued_line $repeat(${len + strlen($stripcrap(ALL $str))}  )
+}
+
+alias a.channel.align.off {
+    switch ($ac.config(align_public)) {
+	(on) (left) (right) {
+	    stack pop set indent
+	    stack pop set continued_line
+	}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

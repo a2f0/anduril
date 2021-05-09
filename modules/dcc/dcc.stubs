@@ -1,0 +1,109 @@
+### $Id: dcc.stubs,v 1.6 2002/01/28 07:17:32 wd Exp $
+ac.package dcc
+
+### a function to convert filenames
+### args: convert flags, file
+alias a.dcc.convert_name {
+    @:name = [$1-]
+    @:i = 0
+    @:c = left(1 $0)
+    while (c) {
+	switch ($ascii($c)) {
+	    ### (l): lowercase
+	    (108) {
+		@:name = tolower($name)
+	    }
+	    ### (L): uppercase
+	    (76) {
+		@:name = toupper($name)
+	    }
+	    ### (s): replace %20 with spaces
+	    (115) {
+		@sar(rg/%20/ /name)
+	    }
+	    ### (S): replace spaces with %20
+	    (83) {
+		@sar(rg/ /%20/name)
+	    }
+	    ### (u): replace underscores with spaces
+	    (117) {
+		@sar(rg/_/ /name)
+	    }
+	    ### (U): replace spaces with underscores
+	    (85) {
+		@sar(rg/ /_/name)
+	    }
+	}
+	@:i++
+	@:c = mid($i 1 $cflags)
+    }
+    return $name
+}
+
+alias dlpath (mask, path, flags) {
+    if (mask == []) {
+	@:i = 0
+	a.box.start dcc path settings
+	a.box.echo (default) -> $ac.config(dcc_dldir) [$ac.config(dcc_convert)]
+	fe ($a.dcc.dlpath.masks) xx {
+	    a.box.echo $xx -> $word($i $a.dcc.dlpath.paths) [$word($i $a.dcc.dlpath.cons)]
+	    @:i++
+	}
+	a.box.end
+	return
+    }
+
+    if (path == []) {
+	@usage(dlpath)
+	return
+    }
+
+    @:n = findw($mask $a.dcc.dlpath.masks)
+
+    if (mask == [-]) {
+	if (n == -1) {
+	    aerrecho no mask $mask in dl paths
+	    return
+	}
+	### because I can't find a way to remove a word by index, I did
+	### this instead
+	@a.dcc.dlpath.masks = remw($mask $a.dcc.dlpath.masks)
+	@a.dcc.dlpath.paths = remw( $chngw($n  $a.dcc.dlpath.paths))
+	@a.dcc.dlpath.cons = remw( $chngw($n  $a.dcc.dlpath.cons))
+	aecho removed mask $mask
+    }
+
+    if (n != -1) {
+	@a.dcc.dlpath.paths = chngw($n $path $a.dcc.dlpath.paths)
+	if (flags) {
+	    @a.dcc.dlpath.cons = chngw($n $flags $a.dcc.dlpath.cons)
+	}
+	aecho changed save path for mask $mask to $path \(conversions: $flags\)
+    } else {
+	@a.dcc.dlpath.masks #= [ $mask]
+	@a.dcc.dlpath.paths #= [ $path]
+	if (flags == []) {
+	    @:flags = [-]
+	}
+	@a.dcc.dlpath.cons #= [ $flags]
+	aecho added save path for mask $mask: $path \(conversions: $flags\)
+    }
+}
+
+alias a.dcc.save {
+    if (a.dcc.dlpath.masks == []) {
+	### nothing to save
+	return
+    }
+
+    @:fd = a.save.open($apath/etc/dcc.paths dcc path info)
+    if (fd < 0) {
+	return
+    }
+    @write($fd ^assign a.dcc.dlpath.masks $a.dcc.dlpath.masks)
+    @write($fd ^assign a.dcc.dlpath.paths $a.dcc.dlpath.paths)
+    @write($fd ^assign a.dcc.dlpath.cons $a.dcc.dlpath.cons)
+    @close($fd)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

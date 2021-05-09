@@ -1,0 +1,19 @@
+# $Id $
+
+:new command samode <stuff>
+:comm samode desc performs a raw SAMODE command
+:comm samode flags o
+:comm samode xref comm:mode
+:comm samode help \
+this command simply sends a direct SAMODE command to the server with your \
+given arguments.
+
+alias samode {
+    if ([$0] == []) {
+	@usage(samode)
+	return
+    }
+    quote samode $*
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,338 @@
+### $Id: log.stubs,v 1.19 2004/01/10 11:52:09 wd Exp $
+ac.package log
+
+@a.log.stat.write = a.log.stat.bytes = 0
+
+alias logstat {
+    @:open = :total = 0
+    fe ($aliasctl(assign match a.log.des.)) xx {
+	@:des = [$($xx)]
+	if (a.log.des[$des][fd] > -1) {
+	    @:open++
+	}
+	@:total++
+    }
+
+    a.box.start logging system statistics
+    a.box.echo $total log descriptors created
+    a.box.echo $open log descriptors open
+    a.box.echo $ac.size_fmt($a.log.stat.bytes) logged in $a.log.stat.write messages since this module was loaded
+    a.box.end
+}
+	
+	
+### a.log.open(file|logdes, settings)
+### settings can be any combination of the words:
+### 'strip' - do not strip all coloration/highlighting
+### 'autoclose' - automatically close the file after a certain length of
+###               inactivity (e.g. close file after 2 minutes of no data)
+### 'autoclear' - automatically destroy the created descriptor after a time
+### words prefixed with a 'no' are set in the opposite state
+###
+### if you're not sure if your log descriptor still exists, pass 'logdes',
+### if it does, the function does nothing but return the number.
+### 
+### you must store the number returned by this function for use later.
+### it is (more or less) gauranteed to be unique, so no one should trounce
+### descriptors.
+alias a.log.open (file, settings) {
+    if (isnumber($file)) {
+	@:des = file
+    } else {
+	@:des = a.log.des.count++
+    }
+
+    ### if des already exists, reopen the file if necessary, and then return
+    if (a.log.des[$des][last]) {
+	if (a.log.des[$des][fd] < -1) {
+	    @a.log.openfd($des)
+	}
+	@a.log.set($des $settings)
+	return $des
+    }
+
+    ### we set this so we can generate a list with 'aliasctl(assign match...)'
+    @a.log.des[$des] = des
+    ### create the necessary directories for this file
+    @:file = a.log.get_path($file $settings)
+    if (fexist($file) == -1) {
+	# make the requisite directories to place the file in
+	@a.log.mkdirp($before(-1 / $file))
+    }
+    @a.log.des[$des][file] = file
+    @a.log.openfd($des)
+    @a.log.des[$des][last] = time()
+    @a.log.set($des $settings)
+    return $des
+}
+
+alias a.log.get_path (file, settings) {
+    if (left(1 $file) == [/]) {
+	return $file
+    }
+    @:path = [$ac.config(log_directory)/$strftime(%Y-%m-%d)]
+    if (ac.config(log_split_by_network) && findw(nonetwork $settings) == -1) {
+	@:net = a.network.get()
+	if (net != []) {
+	    @:path #= [/$net]
+	}
+    }
+    return $tolower($path/$file)
+}
+
+### a.log.openfd(des) opens the file descriptor for des, this also places
+### a timestamp at the place of opening.
+alias a.log.openfd (des) {
+    if (a.log.des[$des][fd] >= 0) {
+	@a.log.closefd($des)
+    }
+    @a.log.des[$des][fd] = open($a.log.des[$des][file] W)
+    @write($a.log.des[$des][fd] $stripcrap(ALL $a.timestamp(1 longts)): log opened)
+}
+
+### a.log.closefd(des) closes the file descriptor for des, and also marks
+### a time when the file is closed
+alias a.log.closefd (des) {
+    @write($a.log.des[$des][fd] $stripcrap(ALL $a.timestamp(1 longts)): log closed)
+    @close($a.log.des[$des][fd])
+    @a.log.des[$des][fd] = -1
+}
+
+### parse settings and apply them to a descriptor
+alias a.log.set (des, settings) {
+    @:set = a.log.des[$des][flags]
+    fe ($settings) xx {
+	if (left(2 $xx) == [no]) {
+	    @:xx = rest(2 $xx)
+	    @:plus = 0
+	} else {
+	    @:plus = 1
+	}
+	switch ($xx) {
+	    (rotate) {
+		if (!plus) {
+		    @:set #= [r]
+		}
+	    }
+	    (strip) {
+		if (!plus) {
+		    @:set #= [n]
+		}
+	    }
+	    (autoclose) {
+		if (plus) {
+		    @:set #= [c]
+		}
+	    }
+	    (autoclear) {
+		if (plus) {
+		    @:set #= [d]
+		}
+	    }
+	    (network) {
+		if (plus) {
+		    @:set #= [t]
+		}
+	    }
+	}
+    }
+
+    @a.log.des[$des][flags] = pass(ncdt $set)
+}
+
+### try and find a descriptor for 'file', called from 'a.log'
+alias a.log.find (file) {
+    fe ($aliasctl(assign match a.log.des.)) xx {
+	if ([$($(xx)[file])] == file) {
+	    return $($xx)
+	}
+    }
+    return -1
+}
+
+### the log cleaner, wanders through each log desc checking to see if
+### we should close the descriptor or destroy the item
+alias a.log.clean {
+    fe ($aliasctl(assign match a.log.des.)) xx {
+	@:des = [$($xx)]
+	### check for destroy first
+	if (pass(d $a.log.des[$des][flags]) != [] && \
+	    (time() - a.log.des[$des][last]) > 1800) {
+	    @a.log.close($des)
+	    continue
+	}
+	if (pass(c $a.log.des[$des][flags]) != [] && \
+	    (time() - a.log.des[$des][last]) > 180) {
+	    @a.log.closefd($des)
+	}
+    }
+}
+
+### the log closer, closes a given descriptor (by basically destroying
+### its contents :)
+alias a.log.close (des) {
+    if (a.log.des[$des] != des) {
+	return
+    }
+
+    if (a.log.des[$des][fd] > 0) {
+	@a.log.closefd($des)
+    }
+    fe ($aliasctl(assign pmatch a.log.des.$des\.*)) yy {
+	//^assign -$yy
+    }
+    //^assign -a.log.des.$des
+}
+
+### finally, the belly of the beast, the log function.
+alias a.log (file, data) {
+    if (isnumber($file)) {
+	@:des = file
+	if (a.log.des[$des] != des) {
+	    aerrecho attempting to log to non-existant log descriptor
+	    return
+	}
+    } else {
+	@:file = a.log.get_path($file)
+	@:des = a.log.find($file)
+	if (des == -1) {
+	    @:des = a.log.open($file autoclean autoclear)
+	}
+    }
+    if (des < 0) {
+	return
+    }
+
+    if (a.log.des[$des][fd] < 0) {
+	@a.log.openfd($des)
+    }
+    if (a.log.des[$des][fd] < 0) {
+	return
+    }
+	
+    @data = [$a.timestamp(log)$data]
+    if (pass(n $a.log.des[$des][flags]) == []) {
+	@data = stripcrap(ALL $data)
+    }
+    @write($a.log.des[$des][fd] $data)
+    @a.log.des[$des][last] = time()
+    @a.log.stat.write++
+    @a.log.stat.bytes += strlen($data)
+
+    return $des
+}
+
+### a.log.cleanup: closes all open logs
+alias a.log.cleanup {
+    fe ($aliasctl(assign match a.log.des.)) xx {
+	@:des = [$($xx)]
+	@a.log.close($des)
+    }
+}
+
+alias a.log.mkdirp (fdir) {
+    @:base = [/]
+    fe ($split(/ $fdir)) dir {
+	if (fexist($base$dir) == -1) {
+	    @mkdir($base$dir)
+	}
+	@base #= [$dir/]
+    }
+}
+
+###############################################################################
+### log rotator stuff here.
+###############################################################################
+alias a.log.rotate {
+    # we close all logs at midnight
+    fe ($aliasctl(assign match a.log.des.)) xx {
+	@:des = [$($xx)]
+	if (pass(r $a.log.des[$des][flags]) == []) {
+	    @a.log.closefd($des)
+	}
+    }
+
+    return
+    # we're not doing any of this other stuff for now.
+    # snag the day of month and day of week
+    @:d = strftime(%d)
+    @:wd = strftime(%u)
+    switch ($ac.config(log_archive)) {
+	(no) {
+	    return
+	}
+	(weekly) {
+	    if (wd != 1) {
+		return
+	    }
+	    @:archdates = [the week of $strftime(${time() - 691200} %d/%m/%Y)]
+	}
+	(monthly) {
+	    if (d != 1) {
+		return
+	    }
+	    @:archdates = [the month of $strftime(${time() - 86400} %m/%Y)]
+	}
+	(*) {
+	    @:archdates = strftime(${time() - 86400} %d/%m/%Y)
+	}
+    }
+
+    # the archive date..
+    @:date = strftime(%Y-%m-%d)
+    # some other stuff..
+    @:dir = ac.config(log_archive_dir)
+    @:ldir = ac.config(log_directory)
+    @:ldf = after(-1 / $ldir) ## [.$date]
+    @a.log.mkdirp($dir)
+    @chmod($dir $ac.config(log_directory_mask))
+    @:file = [logs.$date\.tar]
+    switch ($ac.config(log_archive_compress)) {
+	(b) {
+	    @:tf = [ycf]
+	    @:file #= [.bz2]
+	}
+	(z) {
+	    @:tf = [zcf]
+	    @:file #= [.gz]
+	}
+	(*) {
+	    @:tf = [cf]
+	}
+    }
+
+    # this is an awful, awful hack.  use our pid as a time to sleep.  hopefully
+    # the youngest client will archive the files first.  we actually sleep for
+    # the value of the pid times 1,000 to magnify differences, and hopefully
+    # let the first process go...first
+    usleep ${pid() * 1000}
+
+    if (fexist($file) != -1 || fexist($dir/$ldf) != -1 || \
+	fexist($ldir\.$date) != -1) {
+	# if the log directory has been moved, or even already tarred up, we
+	# return
+	return
+    }
+
+    stack push set notify_on_termination
+    //^set notify_on_termination off
+    ^on ^exec "%logmv *"
+    ^on ^exec_errors "%logmv *"
+    ^on ^exec_exit "%logmv *" aecho archived logs to $ldf for $archdates
+    ^exec -name logmv mv $ldir $ldir\.$date \; mkdir $ldir \; \
+	mv $ldir\.$date $dir/$ldf \; \
+	\(cd $dir && tar $tf $file $ldf && rm -rf $ldf\)
+    stack pop set notify_on_termination
+    ^on exec -"%logmv *"
+    ^on exec_errors -"%logmv *"
+    ^on exec_exit -"%logmv *"
+    @chmod($ldir $ac.config(log_directory_mask))
+}
+
+^eval on #-exit $ac.hash(log) "*" {a.log.cleanup}
+^eval on #-timer $ac.hash(log) "00:00" {a.log.rotate}
+^eval on #-timer $ac.hash(log) "12:00am" {a.log.rotate}
+
+^timer -ref logclean -rep -1 120 a.log.clean
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

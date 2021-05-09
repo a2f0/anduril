@@ -1,0 +1,40 @@
+-----------------------------------------------------------------------------
+$Id: TODO,v 1.25 2003/10/10 07:50:20 wd Exp $
+-----------------------------------------------------------------------------
+A small roadmap:
+o Addition of a real, menu-based help system.  To do this I'll be adding:
+  - Meta-data for modules, configs, and formats.  This just means extended
+    help data for these things.  Formats/configs will get long descriptions,
+    modules will have some kind of varied topic structure.
+  - The creation of a programmable menu browser-thingy.
+o A real code audit.  Removal of all these idiotic single letter variables.
+  This will, theoretically, allow me to get rid of the builtin_expando crap.
+o More themes, formats, and other fun.  New skins and stuff.
+o Other things not listed here but further down in the TODO.
+
+This list is now completely unsorted.  I'll get to each of these if and when
+I find time and desire.
+-----------------------------------------------------------------------------
+o filter ignore command using a.channel.filter
+o Reminder feature, e.g. /remind <day(s)> at <time> <whatever>
+o targets in timestamps
+o DCC info in status bars
+o Some sort of flood protection.
+o Improve the /rel system (a lot)
+o Some kind of real installer?  To ask questions etc?
+o netsplit detection (probably in it's own module)
+o reasons module (add/remove reasons from different files)
+o Fix autojoin precmd to separate the 'wait for invite' semantics.
+o menu module for interactive setup stuff, this is going to be tough
+  so I moved it lower so I could get other work done.
+o add cross-references for everything, and fix the formatting
+o add more stuff in the oper module, will do this basically as
+  requested
+o random realname support
+o cleanup for speed/size improvements.  convert aliases and functions
+  to "function" format (alias foo (bar, baz)).  Make sure modules keep
+  all of their aliases and assigns in their own structure (i.e.
+  a.module.<crap>)
+  (this is kind of an ongoing process, so I've probably done some, but
+   it's something I can also probably do more of)
+o stupid game modules (for vault)

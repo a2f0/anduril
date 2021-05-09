@@ -1,0 +1,16 @@
+# formats for type nlist and slaves nlist_data
+ac.format.add                nlist $(dcol1)[$(col1)$ac.len(-@nlen@ @num@)$(dcol1)] [$(col1)$ac.len(@dlen@ @data@)$(dcol1)]
+ac.format.add           nlist_data $(dcol1)[$(hcol1)$ac.len(-@nlen@ @num@)$(dcol1)] [$(ncol)$ac.len(@dlen@ @data@)$(dcol1)]
+
+ac.format.add                nlist $(dcol1)[$(hcol1)$ac.len(-@nlen@ @num@)$(dcol)]$(ncol) $ac.len(@dlen@ @data@)
+ac.format.add           nlist_data $(dcol1)[$(hcol1)$ac.len(-@nlen@ @num@)$(dcol)]$(ncol) $ac.len(@dlen@ @data@)
+# ---
+
+# formats for type list and slaves list_data
+ac.format.add                 list $(dcol1)[$(col1)$ac.len(@dlen@ @data@)$(dcol1)]
+ac.format.add            list_data $(dcol1)[$(ncol)$ac.len(@dlen@ @data@)$(dcol1)]
+
+ac.format.add                 list $ac.len(@dlen@ @data@)
+ac.format.add            list_data $ac.len(@dlen@ @data@)
+# ---
+

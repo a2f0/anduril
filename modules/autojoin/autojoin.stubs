@@ -1,0 +1,162 @@
+### $Id: autojoin.stubs,v 1.10 2002/07/27 02:56:31 wd Exp $
+ac.package autojoin
+
+alias autojoin (chan, net) {
+    if (chan == []) {
+	a.autojoin.list
+	return
+    } elsif (chan == [*]) {
+	if (net == []) {
+	    @:net = a.network.get()
+	    if (net == []) {
+		@:net = [*]
+	    }
+	}
+	aecho joining all channels for network $net
+	a.autojoin.do $net
+	return
+    }
+		
+    if (left(1 $chan) == [-]) {
+	@:remove++
+	@:chan = after(- $chan)
+    }
+
+    if (!remove) {
+	//^window new name config hide swap last
+    }
+
+    if (net == []) {
+	### determine our current network
+	@:net = a.network.get()
+	if (net == []) {
+	    @:net = [*]
+	}
+	aecho autojoin channels can be limited to a specific network.  currently you
+	aecho appear to be on ${net == [*] ? [an unknown network] : net}.  if you want
+	aecho to autojoin on all networks, specify *, otherwise just hit enter.
+	aecho  
+	@:input = ac.question(do you want to use another network for $chan\? [$net]:)
+	if (input != []) {
+	    @:net = input
+	}
+    }
+    if (findw($net $a.network.list) == -1 && net != [*]) {
+	aerrecho unknown network $net
+	return
+    }
+
+    @:index = a.autojoin.find($chan $net)
+
+    if (remove) {
+	if (index == -1) {
+	    aerrecho no channel/net autojoin for $chan/$net
+	    return
+	}
+	### otherwise, just turn off the autojoin the lame way
+	@a.autojoin[$index][chan] = 0
+	aecho removed autojoin for $chan/$net
+	return
+    }
+
+    if (index != -1) {
+	@:key = a.autojoin[$index][key]
+	@:window = a.autojoin[$index][window]
+	if (window == 0) {
+	    @:window = []
+	}
+	@:precmd = a.autojoin[$index][precmd]
+	@:postcmd = a.autojoin[$index][postcmd]
+    } else {
+	@:key = :window = :precmd = :postcmd = []
+    }
+
+    @:input = ac.question(is there a key for $chan? [$key]:)
+    if (input != []) {
+	@:key = input
+    }
+
+    aecho autojoined channels can be placed in a specific window, any new window
+    aecho or no window at all.  the default is no window at all. you may enter
+    aecho n for any new window, a number for the window to place the channel in.
+    aecho or 0 for no window at all.
+    aecho
+    @:input = ac.question(window for $chan [$window]:)
+    if (input != []) {
+	@:window = input
+    } else {
+	if (window == []) {
+	    @:window = 0
+	}
+    }
+
+    aecho if you would like a command to execute before an attempt to join the
+    aecho channel, please specify it here.  by default no command will be executed.
+    aecho to remove an existing command, enter a single '-' character.
+    aecho
+    @:input = ac.question(enter a desired command [$precmd]:)
+    if (input != []) {
+	@:precmd = input
+    }
+	
+    aecho if you would like a command to execute after the channel is joined please
+    aecho specify it here.  by default no command will be executed to remove an
+    aecho existing command, enter a single '-' character.
+    aecho
+    @:input = ac.question(enter a desired command [$postcmd]:)
+    if (input != []) {
+	@:postcmd = input
+    }
+
+    a.autojoin.add $chan $net $window $key
+    if (precmd != []) {
+	a.autojoin.add_precmd $chan $net $precmd
+    }
+    if (postcmd != []) {
+	a.autojoin.add_postcmd $chan $net $postcmd
+    }
+
+    //^window killswap
+    aecho added autojoin for channel $chan on ${net == [*] ? [all networks] : [network $net]}
+}
+
+alias a.autojoin.list {
+    a.list.start u 4 active autojoins
+    a.list.hdr channel
+    a.list.hdr network
+    a.list.hdr window
+    a.list.hdr key
+
+    for (@:n = 0, n < a.autojoin.count, @:n++) {
+	if (a.autojoin[$n][chan] != 0) {
+	    @push(:list $a.autojoin[$n][net]ÿ$pad(-4 0 $a.autojoin[$n][window])ÿ$a.autojoin[$n][chan])
+	}
+    }
+    @:list = sort($list)
+    fe ($list) xx {
+	@:chan = after(-1 ÿ $xx)
+	@:net = before(ÿ $xx)
+	@:n = a.autojoin.find($chan $net)
+	a.list.add $a.autojoin[$n][chan]
+	if (a.autojoin[$n][net] == [*]) {
+	    a.list.add any
+	} else {
+	    a.list.add $a.autojoin[$n][net]
+	}
+	switch ($a.autojoin[$n][window]) {
+	    (n) {
+		a.list.add any new window
+	    }
+	    (0) {
+		a.list.add no window
+	    }
+	    (*) {
+		a.list.add $a.autojoin[$n][window]
+	    }
+	}
+	a.list.add $a.autojoin[$n][key]
+    }
+    a.list.end
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

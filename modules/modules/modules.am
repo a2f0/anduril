@@ -1,0 +1,103 @@
+### $Id: modules.am,v 1.29 2001/11/14 09:40:37 wd Exp $
+
+:new module modules
+:mod modules version 48
+:mod modules desc Displays module events, adds module commands
+:mod modules author wd@anduril.org White_Dragon Chip Norkus
+:mod modules depend box usage
+
+:new command insmod <module(s)>
+:comm insmod desc load module
+:comm insmod aliases loadmod
+:comm insmod flags i
+:comm insmod xref comm:rmmod comm:rlmod comm:lsmod
+:comm insmod help \
+inserts (loads) a module into the script, most enjoyable.
+
+alias a.modules.make_list {
+    @a.modules.list = []
+    fe ($glob($apath/modules/*/*.am)) xx {
+	@push(a.modules.list $sar(g=.am==$after(-1 / $xx)))
+    }
+}
+a.modules.make_list
+
+mstub insmod
+
+:new command rmmod <module(s)>
+:comm rmmod desc remove module
+:comm rmmod aliases unloadmod
+:comm rmmod flags i
+:comm insmod xref comm:insmod comm:rlmod comm:lsmod
+:comm rmmod help \
+unloads a module from the script
+
+mstub rmmod
+
+:new command rlmod <module>
+:comm rlmod desc reloads a module
+:comm rlmod aliases
+:comm insmod xref comm:insmod comm:rmmod comm:lsmod
+:comm rlmod help \
+reloads a specified module (insmod + rmmod)
+
+mstub rlmod
+
+:new command lsmod [-v]
+:comm lsmod desc list modules
+:comm lsmod aliases listmod modules
+:comm lsmod flags i
+:comm insmod xref comm:insmod comm:rmmod comm:rlmod
+:comm lsmod help \
+lists modules suppled with the script.  with the -v flag it gives a \
+brief description of each module as well.
+
+mstub lsmod
+
+### formats here!
+:new format load_module Displayed when a module is loaded
+:form load_module arguments @name@ @version@ @email@ @nick@ @comms@ @confs@ @forms@ @loadtime@ @author@
+
+:new format unload_module Displayed when a module is unloaded
+:form unload_module arguments @name@
+
+### hooks of module loader caught here
+^on ^hook "module_loadstart" {
+    ### save the old input prompt
+    @module_loadstarted++
+}
+
+^on ^hook "module_loadprogress" {
+    ### because of the way the module loader works, we won't get the start message before it starts,
+    ### so check here, call the hook if needbe
+    if (!module_loadstarted) {
+	hook module_loadstart
+    }
+}
+
+^on ^hook "module_loaded *" {
+    ### because of the way the module loader works, we won't get the start message before it starts,
+    ### so check here, call the hook if needbe
+    if (!module_loadstarted) {
+	hook module_loadstart
+    }
+    @module_loadstarted--
+    if ([$1] == [modules] && (anduril || !ac.config(modules_quietload))) {
+	### if we just got loaded...(heh)
+	fe ($ac.module.list) xx {
+	    aecho $fparse(load_module $xx $modules[$xx][version] $modules[$xx][authemail] $modules[$xx][authnick] $modules[$xx][commands][count] $modules[$xx][configs][count] $modules[$xx][formats][count] $modules[$xx][loadtime] $modules[$xx][authname])
+	}
+    } elsif (anduril || !ac.config(modules_quietload)) {
+	aecho $fparse(load_module $1-)
+    }
+}
+
+^on ^hook "module_unloaded *" {
+    aecho $fparse(unload_module $1-)
+}
+
+:new config modules_quietload do not output during script load-time
+:conf modules_quietload value 1
+:conf modules_quietload flags bt
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

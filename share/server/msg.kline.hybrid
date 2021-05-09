@@ -1,0 +1,146 @@
+# $Id: msg.kline.hybrid,v 1.3 2004/01/21 07:41:08 wd Exp $
+
+# kline et al
+@a.server.sfilter.add(kline a.server.hybrid.kline.display)
+
+on ^oper_notice "% K%line active for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% Z%line active for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % added K%Line for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % added D%Line for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % added Z%Line for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% X-line Warning % %, user %" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % added temporary * K%Line *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % has removed the temporary K%Line for: *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % has removed the K%Line for: *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% % has removed the D%Line for: *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% Temporary K%line for *" {
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% * is requesting gline for *" {
+    @ lastglinereq = after(1 [ $before(-1 ] $8))
+    @ lastglinersn = after(1 [ $before(-1 ] $9-))
+    if (before(! $1) == servernick() || match($3 $builtin_expando(S)) || match($lastglinereq $gline.var)) {
+        flushg
+    }
+    @a.server.sfilter(kline $0 $1-)
+}
+on ^oper_notice "% * has triggered gline for *" {
+    ^push gline.var $lastglinereq  
+    if (after(1 [ $before(-1 ] $8)) == lastglinereq || before(! $1) == servernick()) {
+        flushg
+    }
+    if (!gline.time) {
+        ^timer -refnum gline.exp -repeat -1 43200 {@ gline.var = []}
+        @ gline.time = 1
+    }
+    @a.server.sfilter(kline $0 $1-)
+}
+
+alias a.server.hybrid.kline.display (type, win, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+    @:by = from
+
+    if (midw(0 2 $msg) == [K-line active]) {
+	@:all = restw(3 $msg)
+
+	a.oper.echo $win kline active for $(hcol1)$all 
+
+    } else if (midw(0 2 $msg) == [Z-line active]) {
+	@:all = restw(3 $msg)
+
+	a.oper.echo $win zline active for $(hcol1)$all 
+
+    } else if (midw(1 2 $msg) == [added K-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(4 $msg))
+	@:msg = strip([] $restw(5 $msg))
+
+	a.oper.echo $win $(hcol1)perm$(col1)kline $(dcol1)[$(ncol)$host$(dcol1)] $(ncol)by $(hcol)$nick $(dcol1)[$(ncol)$msg$(dcol1)]
+
+    } else if (midw(1 2 $msg) == [added D-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(4 $msg))
+	@:msg = strip([] $restw(5 $msg))
+
+	a.oper.echo $win $(hcol1)perm$(col1)dline $(dcol1)[$(ncol)$host$(dcol1)] $(ncol)by $(hcol)$nick $(dcol1)[$(ncol)$msg$(dcol1)]
+
+    } else if (midw(1 2 $msg) == [added Z-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(4 $msg))
+	@:msg = strip([] $restw(5 $msg))
+
+	a.oper.echo $win $(hcol1)perm$(col1)zline $(dcol1)[$(ncol)$host$(dcol1)] $(ncol)by $(hcol)$nick $(dcol1)[$(ncol)$msg$(dcol1)]
+
+    } else if (midw(1 2 $msg) == [added temporary]) {
+	@:nick = word(0 $msg)
+	@:time = word(3 $msg)
+	@:host = strip([] $word(7 $msg))
+	@:msg = strip([] $restw(8 $msg))
+
+	a.oper.echo $win $(hcol1)temp$(ncol)kline$(dcol1)\($(ncol)$time$(dcol1)\) $(dcol1)[$(ncol)$host$(dcol1)] $(ncol)by $(hcol)$nick $(dcol1)[$(ncol)$msg$(dcol1)]
+
+    } else if (midw(1 5 $msg) == [has removed the temporary K-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(7 $msg))
+
+	a.oper.echo $win removed temporary kline for $(hcol1)$host $(dcol1)\($(ncol)$nick$(dcol1)\)
+
+    } else if (midw(1 4 $msg) == [has removed the K-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(6 $msg))
+
+	a.oper.echo $win removed perm kline for $(hcol1)$host $(dcol1)\($(ncol)$nick$(dcol1)\)
+
+    } else if (midw(1 4 $msg) == [has removed the D-line]) {
+	@:nick = word(0 $msg)
+	@:host = strip([] $word(6 $msg))
+
+	a.oper.echo $win removed perm dline for $(hcol1)$host $(dcol1)\($(ncol)$nick$(dcol1)\)
+
+    } else if (midw(0 3 $msg) == [Temporary K-line for]) {
+	@:host = strip([] $word(3 $msg))
+
+	a.oper.echo $win temporary kline for $(hcol1)$host $(ncol)has expired
+
+    } else if (midw(3 4 $msg) == [is requesting gline for]) {
+	@:nick = before(! $word(0 $msg))
+	@:server = word(2 $msg)
+	@:host = strip([] $word(7 $msg))
+	@:msg = strip([] $restw(8 $msg))
+
+	a.oper.echo $win $(hcol1)gline$(col1)request $(col1)$nick$(ncol) on $server: $(hcol)$host $(dcol1)[$(ncol)$msg$(dcol1)]
+
+    } else if (midw(3 4 $msg) == [has triggered gline for]) {
+	@:nick = before(! $word(0 $msg))
+	@:server = word(2 $msg)
+	@:host = strip([] $word(7 $msg))
+	@:msg = strip([] $restw(8 $msg))
+
+	a.oper.echo $win $(hcol1)gline$(col1)trigger $(col1)$nick$(ncol) on $server: $(hcol)$host $(dcol1)[$(ncol)$msg$(dcol1)]
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+

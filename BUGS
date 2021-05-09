@@ -1,0 +1,29 @@
+------------------------------------------------------------------------------
+$Id: BUGS,v 1.7 2002/11/13 19:45:30 wd Exp $
+------------------------------------------------------------------------------
+[Bugs that could feasibly be fixed soon]:
+* There is a race condition if you call ac.module.unload during
+  ac.module.load's execution.
+* Doing completion on lines with double-quoted words causes nasty problems
+  because of the disparity between word()/numwords() and leftw()/chngw()
+* Some of the help may be innacurate.  It is not consistent through all
+  modules.  Things that perfectionist people (like myself) get picky about
+  are making me itchy.  Some commands may actually be incorrect documented!
+------------------------------------------------------------------------------
+[Bugs that probably aren't going to be fixed soon]:
+* Re-doing dependencies after each load kind of sucks, the whole system just
+  isn't quite as good as it could be.  At some point I need to figure out
+  a simple way to change dependencies only based on what a module needs.
+-------------------------------------------------------------------------------
+[If you found a bug]:
+If you have found a bug in the core system, grab the contact info from the
+README, and send the info to the appropriate place there.  If you have found
+a bug in one of the modules, please let me know (info in README) and also
+let the author know!  I just like to know these things in case someone were
+to ask me "why does so and so not work", and also if the bug is in the base
+distribution of modules, I may want to get a fix out before the author does.
+
+If at all possible, tell me why the bug happened (or make an educated guess,
+if you can do so)
+
+Thanks!

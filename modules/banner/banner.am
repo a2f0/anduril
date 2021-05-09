@@ -1,0 +1,35 @@
+### $Id: banner.am,v 1.17 2002/06/18 00:06:47 wd Exp $
+
+:new module banner
+:mod banner version 30
+:mod banner desc echo string/command support
+:mod banner author wd@anduril.org White_Dragon Chip Norkus
+:mod banner dep timestamp
+:mod banner meta timestamp banner
+
+alias aecho {
+	xecho $a.timestamp(banner ts $fparse(banner))$*
+}
+
+alias aerrecho {
+	xecho $a.timestamp(banner)$fparse(banner_mod E) $*
+}
+
+:new format banner header string for echos
+:form banner flags i
+:form banner list_command a.banner.banner_list
+
+:new format banner_mod header string for error (and other) echos
+:form banner_mod arguments @mod@
+
+alias a.banner.banner_list {
+	a.list.start n 0 echo strings
+	for (@:i = 0, i < formats[banner][formats][count], @:i++) {
+		a.list.add $cparse("$formats[banner][formats][$i]")
+	}
+	a.list.end
+}
+
+//^set banner $fparse(banner)
+//^set banner_expand on
+# vim: syntax=off ts=3 ai smartindent

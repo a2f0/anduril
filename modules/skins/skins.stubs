@@ -1,0 +1,145 @@
+### $Id: skins.stubs,v 1.9 2001/10/28 10:11:59 wd Exp $
+ac.package skins
+
+# get info about a specific skin, if possible.  returned as:
+# <name> <author> <description>
+
+alias a.skins.info (name) {
+    @:fd = open($apath/share/skins/$name\.askin R)
+    if (fd > -1) {
+	@:r = after(# $read($fd))
+	@close($fd)
+	return $r
+    }
+}
+	 
+alias slist {
+    a.list.start u 3 skins
+    a.list.hdr name
+    a.list.hdr author
+    a.list.hdr description
+    a.skins.make_list
+    fe ($a.skins.list) xx {
+	@:inf = a.skins.info($xx)
+	a.list.add $word(0 $inf)
+	a.list.add $word(1 $inf)
+	a.list.add $restw(2 $inf)
+    }
+
+    a.list.end $#a.skins.list skins available
+}
+
+alias skin (name) {
+    if (name == []) {
+	@usage(skin)
+	return
+    }
+	
+    @:inf = a.skins.info($name)
+    if (inf == []) {
+	aerrecho could not find skin $0
+	return
+    }
+	
+    aecho loading skin $name by $word(1 $inf) \($restw(2 $inf)\)
+    ^load $apath/share/skins/$name\.askin
+    ### make status bars work
+    fe ($formats[status][slaves]) xx {
+	if (xx != [operview_status]) {
+	    //^set $xx $(format_$xx)
+	}
+    }
+    ^set status_format $format_status_format1
+}
+
+alias ssave (name, desc) {
+    if (name == []) {
+	@usage(ssave)
+	return
+    }
+    ### by default, save formats but not configs
+    @:f=1
+    @:c=0
+	
+    @:t = left(1 $name)
+    if (t == [+] || t == [-]) {
+	switch ($rest(1 $name)) {
+	    (c) {
+		if (t==[+]) {
+		    @:c=1
+		} else {
+		    @:c=0
+		}
+	    }
+	    (f) {
+		if (t==[+]) {
+		    @:f=1
+		}{
+		    @:f=0
+		}
+	    }
+	    (cf) (fc) {
+		if (t==[+]) {
+		    @:c=:f=1
+		}{
+		    @:c=:f=0
+		}
+	    }
+	    (*) {
+		aerrecho must be either f or c
+		return
+	    }
+	}
+	@:name = word(0 $desc)
+	@:desc = restw(1 $desc)
+    }
+	
+    if (!c && !f) {
+	aerrecho must save at least one of formats or configs
+	return
+    }
+	
+    @:inf = a.skins.info($name)
+    @:file = [$apath/share/skins/${name}.askin]
+    @unlink($file)
+    @:fd = open($file W)
+	
+    if (fd < 0) {
+	aerrecho could not open file $file
+	return
+    }
+	
+    # if the skin existed before, try and pull the data from the information,
+    # this makes it so that when you re-save a skin for whatever reason the
+    # original author/etc are preserved
+    if (inf != []) {
+	@:author = word(1 $inf)
+	@:desc = desc == [] ? restw(2 $inf) : desc
+    } else {
+	@:author = servernick()
+	@:desc = desc == [] ? [(no description)] : desc
+    }
+
+    aecho saving skin $name [$desc] ...
+	
+    @write($fd #$name $author $desc)
+    if (f) {
+	fe ($ac.format.list) xx {
+	    @write($fd @format_$xx = [$ac.quote_assign($(format_$xx))])
+	}
+	### hack for colors.
+	fe (dcol col hcol dcol1 col1 hcol1 dcol2 col2 hcol2) xx {
+	    @write($fd ^assign $xx $($xx))
+	}
+    }
+    if (c) {
+	fe ($ac.config.list) xx {
+	    @write($fd @ac.config.set\($xx $ac.config($xx)\))
+	}
+    }
+    @close($fd)
+	
+    aecho to file $file
+}
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

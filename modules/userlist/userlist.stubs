@@ -1,0 +1,93 @@
+### $Id: userlist.stubs,v 1.7 2002/02/05 03:59:57 wd Exp $
+ac.package userlist
+
+################################################################################
+### adduser:
+alias adduser (nick, channel, flags, password) {
+    if (channel == []) {
+	@usage(adduser)
+	return
+    }
+    if (match(*!*@* $nick)) {
+	a.userlist.adduser_wrapped $before(! $nick) $after(! $nick) $channel $flags $password
+    } else {
+	userhost $nick -cmd \{if \([$$3@$$4] == [<unknown>@<unknown>]\) \{aerrecho cannot get a hostname for $$0\} else \{a.userlist.adduser_wrapped $$0 $$after\(! $$mask\(3 $$3\@$$4\)\) $channel $flags $password\}\}
+    }
+}
+
+alias a.userlist.adduser_wrapped (nick, mask, channel, flags, password) {
+    ### we have a legitimate user.  find out if there is an entry for them,
+    ### if not put them on the list.
+    if (a.userlist.find($nick $mask $channel) != -1) {
+	aecho user $nick \($mask) on $channel is already in userlist, updating entry.
+    }
+
+    if (flags == []) {
+	@:flags = ac.config(default_user_flags)
+    }
+    # expand the 'f' and 'm' flags.
+    @:flags = msar(g/f/aiopu/m/adijopuv/$flags)
+    @a.userlist.add($nick $mask $channel $flags $password)
+
+    aecho added new user: $nick\($mask\) [$channel] with flags: $flags
+}
+
+################################################################################
+### listuser
+alias listuser {
+    a.list.start u 5 user list
+    a.list.hdr nick
+    a.list.hdr mask
+    a.list.hdr channel
+    a.list.hdr flags
+    a.list.hdr pass
+    for (@:i = 0, i < a.userlist.count, @:i++) {
+	if (a.userlist[$i][mask] != [-]) {
+	    @push(:list $a.userlist[$i][nick]ÿ$a.userlist[$i][mask]ÿ$a.userlist[$i][channel])
+	}
+    }
+    @:list = sort($list)
+    fe ($list) xx {
+	@:nick = before(ÿ $xx)
+	@:mask = before(ÿ $after(ÿ $xx))
+	@:chan = after(-1 ÿ $xx)
+	@:i = a.userlist.find($nick $mask $chan)
+	a.list.add $a.userlist[$i][nick]
+	a.list.add $a.userlist[$i][mask]
+	a.list.add $a.userlist[$i][channel]
+	a.list.add $a.userlist[$i][flags]
+	a.list.add ${a.userlist[$i][pass] ? a.userlist[$i][pass] : [(none)]}
+    }
+    a.list.end $i users
+}
+
+################################################################################
+### deluser
+alias deluser (nick, channel) {
+    if (channel == []) {
+	@:channel = [*]
+    }
+    for (@:i = 0, i < a.userlist.count, @:i++) {
+	if (a.userlist[$i][nick] == nick && match($channel $a.userlist[$i][channel])) {
+	    aecho removing $a.userlist[$i][nick]\($a.userlist[$i][mask]\) [$a.userlist[$i][channel]]
+	    @a.userlist[$i][nick] = a.userlist[$i][mask] = a.userlist[$i][channel] = [-]
+	}
+    }
+}
+
+################################################################################
+### internal stuff: add, find, save
+alias a.userlist.save {
+    if (a.userlist.count <= 0) {
+	return
+    }
+    @:fd = a.save.open($apath/etc/userlist user lists)
+    for (@:i = 0, i < a.userlist.count, @:i++) {
+	if (a.userlist[$i][mask] != [-]) {
+	    @write($fd a.userlist.add $a.userlist[$i][nick] $a.userlist[$i][mask] $a.userlist[$i][channel] $a.userlist[$i][flags] $a.userlist[$i][password])
+	}
+    }
+    @close($fd)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

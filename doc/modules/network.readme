@@ -1,0 +1,62 @@
+networks are divided into three conceptual parts..
+
+a list of servers for a network is specified in a file in the module's share
+directory (modules/network/share) with a filename of <network>.list.
+
+this file is loaded and the list of servers is placed in a variable,
+to get the list you call get_network_list(<networkname>) (like 
+get_network_list(dalnet))
+
+each entry in the server list should be an inidividual line
+
+there is another kind of file in the share dir, a file which contains
+a single alias for testing whether a server is on a certain network,
+and a command to set capabilities for the network type (capss set like a 
+mode command)
+i.e. a file dalnet would contain:
+
+alias a.is_network_dalnet {
+	...
+}
+
+a.network_caps dalnet lmostw 30 6 d 
+
+all aliases are added as a.network_test_<network>, they can depend
+on the network server list existing (that is, if it is present and contains
+anything ;)
+
+network capabilities are as follows:
+
+h <x>: type of /who request supported.  possible values are:
+       e (or n): EFnet, or 'nothing special'
+       d       : DALnet, /who -dx
+       u       : Undernet: /who -ux
+l <x>: nick length, a network supports nicks >9 characters (length is <x>)
+m <x>: mode args, this specifies how many arguments the mode command takes
+       (with <x>)
+o <x>: specifies the opnotice type, where type is one of the following:
+       e (or n): EFnet, or 'no command'
+       d       : DALnet, /msg @#channel
+       u       : Undernet: /wallchops #channel
+    s: services, a network has them (support for these MUST BE DONE in
+       the module for that network anyways, as most services vary)
+    t: token, a network is a 'token network', that is, the only real
+       unique part of a server name is the first part
+    w: WATCH command is supported
+    x: this definition supports 'similarities'.  see below for a good
+       explanation
+       
+On similarities.  After all the network tests are done, if a positive match
+is not found, networks which support 'similarities' are re-tested using a
+second alias: a.like_network_<x> where x is the network (i.e.
+a.like_network_efnet for EFnet)  if the test proves true, the appropriate
+actions are taken and the user is told they are on a '<x> like' network.
+       
+Finally, if a module exists with the same name as the network, it
+is loaded when a connection to that network type is made, and
+unloaded when that connection ends.
+
+additionally, when writing network support modules you can create an 'on
+hook' hook for the 'network_connect' event.  The sole argument will be the
+network that has been connected to.  This will be called as soon as the
+network is determined.

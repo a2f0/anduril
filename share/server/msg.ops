@@ -1,0 +1,92 @@
+# $Id: msg.ops,v 1.1 2003/05/25 01:26:54 wd Exp $
+
+:new command globops <message>
+:comm globops desc sends a globops notice
+:comm globops aliases go
+:comm globops flags o
+:comm globops help \
+this command simply sends a globops notice.  see your appropriate operator \
+Documentation for more information on this.
+
+alias globops {
+    if ([$0] == []) {
+	@usage(globops)
+	return
+    }
+    quote globops :$*
+}
+
+:new command chatops <message>
+:comm chatops desc sends a chatops notice
+:comm chatops aliases co
+:comm chatops flags o
+:comm chatops help \
+this command simply sends a chatops notice.  see your appropriate operator \
+documentation for more information on this.
+
+alias chatops {
+    if ([$0] == []) {
+	@usage(chatops)
+	return
+    }
+    quote chatops :$*
+}
+
+:new command locops <message>
+:comm locops desc sends a locops notice
+:comm locops aliases lo
+:comm locops flags o
+:comm locops help \
+this command simply sends a locops notice.  see your appropriate operator \
+documentation for more information on this.
+
+alias locops {
+    if ([$0] == []) {
+	@usage(locops)
+	return
+    }
+    quote locops :$*
+}
+
+### hooks for glob/chat/locops
+
+@a.server.sfilter.add(locops a.server.msg.ops.disp a.server.msg.ops.log)
+@a.server.sfilter.add(chatops a.server.msg.ops.disp a.server.msg.ops.log)
+@a.server.sfilter.add(globops a.server.msg.ops.disp a.server.msg.ops.log)
+@a.server.sfilter.add(route a.server.msg.ops.disp a.server.msg.ops.log)
+^on ^server_notice "% % % -- from %: *" {
+    @:from = chop(1 $5)
+    if (index(. $from) != -1) {
+	@:from = a.network.gss($from)
+    }
+
+    switch ($2) {
+	(Global) {
+	    @:type = [globops]
+	}
+	(ChatOps) {
+	    @:type = [chatops]
+	}
+	(LocOps) {
+	    @:type = [locops]
+	}
+	(Routing) {
+	    @:type = [route]
+	}
+	(*) {
+	    @:type = [$2]
+	}
+    }
+
+    @a.server.sfilter($type $from $6-)
+}
+
+alias a.server.msg.ops.disp (type, win, from, msg) {
+    a.oper.echo $win $fparse(starops $type $from $msg)
+}
+
+alias a.server.msg.ops.log (type, file, from, msg) {
+    @a.log(server/$file $fparse(starops $type $from $msg))
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

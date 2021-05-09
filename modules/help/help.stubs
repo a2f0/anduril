@@ -1,0 +1,258 @@
+### $Id: help.stubs,v 1.12 2002/11/11 06:33:47 wd Exp $
+ac.package help
+
+alias ahelp (type, name) {
+    if (type == [-v]) {
+	@a.help.verbose = 1
+	@:type = word(0 $name)
+	@:name = restw(1 $name)
+    } else {
+	@a.help.verbose = 0
+    }
+    if (type == []) {
+	### make a list of all our important commands
+	fe ($ac.command.list) xx {
+	    if (index(i $commands[$xx][flags]) != -1 || a.help.verbose) {
+		@:s#=[$xx ]
+	    }
+	}
+
+	@:s = sort($s)
+
+	a.list.start u 0 anduril commands
+	fe ($s) xx {
+	    a.list.add $xx
+	}
+	a.list.end
+	return
+    }
+	
+    if (name == []) {
+	@name = type
+	@type = [command]
+    } else {
+	# allow abbreviated types, figure out what they want
+	@:len = strlen($type)
+	if (len <= 2 && (type == [co] || type == [c])) {
+	    aerrecho type '$type' is ambiguous
+	    return
+	}
+
+	if (left($len command) == type) {
+	    @:type = [command]
+	} elsif (left($len config) == type) {
+	    @:type = [config]
+	} elsif (left($len format) == type) {
+	    @:type = [format]
+	} elsif (left($len module) == type) {
+	    @:type = [module]
+	} else {
+	    aerrecho unknown meta type $type
+	    return
+	}
+    }
+
+    a.help.show $type $word(0 $name)
+}
+
+alias a.help.show (type, name) {
+    # figure out what kind of help we're displaying.  do special work first
+    # for the different types.
+    switch ($type) {
+	(command) {
+	    @:c = ac.command.find_alias($name)
+	    if (c == []) {
+		aerrecho no such command $name
+		return
+	    }
+	    a.box.start help for command $c
+	    if (commands[$c][aliases]) {
+		a.box.echo aliases: $commands[$c][aliases]
+	    }
+	    a.box.echo syntax : $builtin_expando(K)$name $commands[$c][syntax]
+	    a.box.echo summary: $commands[$c][desc]
+	    a.box.echo module : $commands[$c][module]
+
+	    @:help = commands[$c][help]
+	    @:xref = commands[$c][xref]
+	}
+	(config) {
+	    @:c = ac.config.find($name)
+	    if (c == []) {
+		aerrecho no such config $name
+		return
+	    } elsif (#c > 1) {
+		aerrecho the config $name is ambiguous
+		return
+	    }
+	    a.box.start help for config $name
+	    a.box.echo desc  : $configs[$c][desc]
+	    a.box.echo module: $configs[$c][module]
+	    if (a.help.verbose) {
+		fec ($configs[$c][flags]) xx {
+		    switch ($xx) {
+			(b) {@push(:s boolean)}
+			(i) {@push(:s important)}
+			(n) {@push(:s number)}
+			(s) {@push(:s string)}
+			(t) {@push(:s skinnable)}
+			(w) {@push(:s word)}
+		    }
+		}
+		a.box.echo flags : $s
+		a.box.echo value : $ac.config($c)
+	    }
+
+	    @:help = configs[$c][help]
+	    @:xref = configs[$c][xref]
+	}
+	(format) {
+	    @:f = ac.format.find($name)
+	    if (f == []) {
+		aerrecho no such format $name
+		return
+	    } elsif (#f > 1) {
+		aerrecho the format $name is ambiguous
+		return
+	    }
+	    a.box.start help for format $name
+	    a.box.echo desc    : $formats[$f][desc]
+	    a.box.echo module  : $formats[$f][module]
+	    if (a.help.verbose) {
+		a.box.echo formats : $formats[$f][formats][count]
+		a.box.echo symbols : $formats[$f][variables][list]
+		fec ($formats[$f][flags]) xx {
+		    switch ($xx) {
+			(i) {@push(:s important)}
+			(%) {@push(:s invisible)}
+		    }
+		}
+		a.box.echo flags   : $s
+		if (formats[$f][display_command]) {
+		    a.box.echo disp cmd: $formats[$f][display_command]
+		}
+		if (formats[$f][list_command]) {
+		    a.box.echo list cmd: $formats[$f][list_command]
+		}
+		if (formats[$f][set_command]) {
+		    a.box.echo set cmd : $formats[$f][set_command]
+		}
+		if (formats[$f][slaves]) {
+		    a.box.echo slaves  : $formats[$f][slaves]
+		}
+	    }
+
+	    @:help = formats[$f][help]
+	    @:xref = formats[$f][xref]
+	}
+	(module) {
+	    if (ac.module.find($name) == []) {
+		aerrecho no such module $name
+		return
+	    }
+	    a.box.start help for module $name
+	    a.box.echo desc     : $modules[$name][desc]
+	    a.box.echo version  : $modules[$name][version]
+	    a.box.echo author   : $modules[$name][authnick]
+	    a.box.echo          : $modules[$name][authname] \<$modules[$name][authemail]\>
+	    if (a.help.verbose) {
+		a.box.echo loaded by: $modules[$name][loader]
+		@:list = [format config command]
+	    } else {
+		@:list = [command]
+	    }
+	    fe ($list) xx {
+		if (modules[$name][$xx\s][count]) {
+		    a.box.echo
+		    a.box.echo $modules[$name][$xx\s][count] $xx${modules[$name][$xx\s][count] == 1 ? [] : [s]}:
+		    a.list.start hu 0
+		    fe ($sort($modules[$name][$xx\s][list])) yy {
+			a.list.add $yy
+		    }
+		    a.list.end
+		}
+	    }
+	    @:help = modules[$name][help]
+	}
+    }
+
+    stack push set word_break
+    //^set word_break 	
+
+    # now output the help data, and cross refs
+    if (help != []) {
+	a.box.echo 
+	### now format the data as requested.  first, expand %% to % with
+	### invisible format characters after it (to keep the below parser
+	### from getting confused, yes this is a cheap hack), then expand
+	### %n to a newline and %t to a tab.
+	@:help = sar(g%%%$help)
+	@:help = msar(g%n$chr(10)%t$chr(9)$help)
+	a.box.echo $help
+    }
+    if (xref != []) {
+	a.box.echo
+	a.box.echo see also:
+	@:xref = sort($xref)
+	a.list.start hu 0
+	fe ($split(: $xref)) type name {
+	    switch ($type) {
+		(comm) {@:type = [cmd]}
+		(form) {@:type = [fmt]}
+	    }
+	    a.list.add $name\($type\)
+	}
+	a.list.end
+    }
+
+    stack pop set word_break
+    a.box.end
+}
+
+alias man {
+	if (![$0]) {
+		@usage(man)
+		return
+	}
+	
+	if (isnumber($0) && [$1]) {
+		@:t=[$0]
+		@:c=[$1]
+		@:r=[$2-]
+	}{
+		if (isnumber($0)) {
+			//help $0
+			//help -wait
+			return
+		}
+		if (match(*\(*\) $0)) {
+			@:t=after(\( $before(\) $0))
+			@:c=before(\( $0)
+			@:r=[$1-]
+			echo $t $c
+		}{
+			@:c=[$0]
+			@:r=[$1-]
+			fe (1 2 3 4 5 6 7 8 x) t {
+				if (glob($help_path/$t*/$0)) {
+					break
+				}
+			}
+			if (t==[x]) {
+				### no joy, try ahelp
+				if (findw($c $ac.command.list)) {
+					ahelp $c
+				} else {
+					aerrecho no help topic for $c
+				}
+				return
+			}
+		}
+	}
+	
+	//help $t $c $r
+	//help -wait
+}
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+

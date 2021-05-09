@@ -1,0 +1,6 @@
+@a.completion.add(relm %+ %[,]N,c)
+
+@a.completion.add(relsm %+ %[,]N,c)
+
+@a.completion.add(paste %+ %N,c)
+

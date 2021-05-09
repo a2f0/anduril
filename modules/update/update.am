@@ -1,0 +1,74 @@
+### $Id: update.am,v 1.6 2003/08/26 01:09:15 wd Exp $
+
+:new module update
+:mod update version 30
+:mod update desc auto-updater module
+:mod update author wd@anduril.org White_Dragon Chip Norkus
+:mod update dep box modules
+
+# these are our various methods of download.  Currently, wget/fetch are
+# supported, and 'ftp' on open/netbsd as a fetch-alike are also supported.
+switch ($uname(%s)) {
+    (FreeBSD) {
+	@a.update.method = [fetch -q -o @file@ @url@]
+    }
+    (OpenBSD) (NetBSD) {
+	@a.update.method = [ftp -V -o @file@ @url@]
+    }
+    (*) {
+	@a.update.method = [wget -q -O @file@ @url@]
+    }
+}
+# check to see that we can use our given method.
+^on ^exec "%update *" {
+    @a.update.method = strip("$chr(13)" $1) ## [ $restw(1 $a.update.method)]
+}
+
+^on ^exec_exit "%update % %" {
+    if ([$2] != 0) {
+	aerrecho sorry, I cannot find a program to download files on your
+	aerrecho system!  You can still check for new files, but you cannot
+	aerrecho download/install them from this script.
+	@a.update.method = []
+    }
+    ^on exec_exit -"%update % %"
+    ^on exec -"%update *"
+}
+^eval exec -name update which $word(0 $a.update.method)
+
+:new command update [-mcv] [[-f] modules]
+:comm update desc updates the script/modules
+:comm update flags i
+:comm update xref conf:auto_update
+:comm update help \
+this command updates the script to the latest version possible.  If a \
+newever major version is available (e.g. 1.0 -> 1.2), it advises the user \
+that this is the case.  to simply check for new versions of things, one \
+can use the -c flag, which will just report on new versions of the script \
+overall, and all incident modules.  if the 'modules' argument is supplied \
+the script will only check/update the specified modules.  if you specify \
+the '-f' flag with the modules, the updates will be forced, even if your \
+version is equal to/newer than the one available from the dist site.  the \
+-v flag will cause the command to be much more verbose in what it's doing.
+
+mstub update
+
+alias a.update.auto_update_chng_cmd {
+    if (ac.config(auto_update) == 0) {
+	^timer -del update
+    } else {
+	^timer -ref update -rep -1 86400 {update -m}
+    }
+}
+
+:new config auto_update automatically run the /update command occasionally?
+:conf auto_update value 0
+:conf auto_update flags b
+:conf auto_update change_cmd a.update.auto_update_chng_cmd
+:conf auto_update xref comm:update
+:conf auto_update help \
+this runs /update -m once every day to check for new modules to be \
+installed.  use with caution!  it should, theoretically, be quite safe, \
+but I make no gaurantees.
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

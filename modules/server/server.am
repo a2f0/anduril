@@ -1,0 +1,1056 @@
+### $Id: server.am,v 1.75 2003/06/10 14:36:21 wd Exp $
+
+:new module server
+:mod server version 166
+:mod server desc various server-related commands and traps
+:mod server author wd@anduril.org White_Dragon Chip Norkus
+:mod server save_cmd a.server.save
+:mod server dep box list network timestamp
+:mod server meta timestamp server
+
+################################################################################
+### server echo command, used to spit out various things
+alias a.server.echo (mod, win, data) {
+    if (a.timestamp(server) == []) {
+	xecho -win $win $fparse(banner_mod $mod) $data
+    } else {
+	xecho -win $win $a.timestamp(server)$data
+    }
+}
+
+################################################################################
+### sfilter
+### sfilter is kind of complicated, but basically it allows you to do various
+### kinds of filtering on server messages.  to add an sfilter type, you first
+### call a function to create a new type and give it functions to display
+### (and possibly) log server messages that come along.  you then add a hook
+### for your action to send to the sfilter system, which decides what to do
+### with the particular input.
+###
+### display functions should take four arguments: type, window, from, and
+### message.  type, from, and message are unaltered by the hook function,
+### and window is the window the user wishes to display the message in
+###
+### log functions should take four arguments: type, file, from, and message
+### this is pretty much the same as the display function, and should be fairly
+### obvious
+
+@a.server.sfilter.count = 0
+
+# load saved data if we have it.
+if (fexist($apath/etc/server.sfilter) != -1) {
+    ^eval load $apath/etc/server.sfilter
+}
+
+### this adds sfilter stuff
+alias a.server.sfilter.add (type, display, logf) {
+    if (type == []) {
+	aerrecho attempt to add sfilter with missing arguments
+	return
+    }
+
+    if (findw($type $a.server.sfilter.types) == -1) {
+	@push(a.server.sfilter.types $type)
+    }
+
+    if (display != []) {
+	@a.server.sfilter[$type][disp] = display
+    } else {
+	@a.server.sfilter[$type][disp] = [a.server.sfilter.display]
+    }
+    if (logf != []) {
+	@a.server.sfilter[$type][log] = logf
+    } else {
+	@a.server.sfilter[$type][log] = [a.server.sfilter.log]
+    }
+}
+
+### this is the sfilter hook, used to catch and filter sfilter stuff
+alias a.server.sfilter (type, from, message) {
+    @:serv = builtin_expando(S)
+    @:net = a.network.get()
+    @:bm = -1
+    @:bmf = 0
+
+    # unknown type?  don't bother filtering
+    if (findw($type $a.server.sfilter.types) == -1) {
+	a.server.sfilter.display $type -1 $from $message
+	return
+    }
+
+    # now walk all of our rules looking for a match.. yech
+    for (@:i = 0,i < a.server.sfilter.count,@:i++) {
+	# this number dictates how many match factors we have
+	@:mf = 0
+
+	# if this isn't our type, move along
+	if (a.server.sfilter[$i][type] != type && \
+	    a.server.sfilter[$i][type] != [*]) {
+	    continue
+	}
+	# check for server/net matches next
+	if (a.server.sfilter[$i][serv] != []) {
+	    if (a.server.sfilter[$i][serv] != serv) {
+		continue
+	    } else {
+		@:mf++
+	    }
+	}
+	if (a.server.sfilter[$i][net] != []) {
+	    if (a.server.sfilter[$i][net] != net) {
+		continue
+	    } else {
+		@:mf++
+	    }
+	}
+	if (!match($a.server.sfilter[$i][match] \"$^"(message)\") || \
+	    !match($a.server.sfilter[$i][from] $from)) {
+	    continue
+	}
+
+	# a match.  decide if we want to do logging here, also we see if it's
+	# better than our current best match.  if it is, reset bm and bmf
+	# here.
+
+	# if something tells us to log and we haven't chosen a log yet, make
+	# sure we do choose one.  same with window selection
+	if (a.server.sfilter[$i][log] != [] && logf == []) {
+	    @:logf = a.server.sfilter[$i][log]
+	}
+	if (a.server.sfilter[$i][win] != [] && win == []) {
+	    @:win = a.server.sfilter[$i][win]
+	}
+
+	# if we haven't had a best match, this has to be it
+	if (bm == -1) {
+	    @:bmf = mf
+	    @:bm = i
+	    continue
+	}
+
+	# if we had a better mf before, we stick with that
+	if (bmf > mf) {
+	    continue
+	}
+
+	# now, mf is equal.  if one match pattern is 'longer' than the other
+	# (this is the best test), we use the one with the longer pattern.  if
+	# they're both the same, look at the from pattern.  if one is a
+	# pattern, and the other is not, use the one that isn't a pattern.
+	# if they're both patterns, use the longest one.  if they're both the
+	# same length, go with the first one.  yuck!
+	if (strlen($a.server.sfilter[$i][match]) > \
+	    strlen($a.server.sfilter[$bm][match])) {
+	    @:bmf = mf
+	    @:bm = i
+	    continue
+	} else if (strlen($a.server.sfilter[$i][match]) > \
+	    strlen($a.server.sfilter[$bm][match])) {
+	    continue
+	}
+
+	if (!ismask($a.server.sfilter[$i][from]) && \
+	    ismask($a.server.sfilter[$bm][from])) {
+	    @:bmf = mf
+	    @:bm = i
+	    continue
+	} else if (ismask($a.server.sfilter[$i][from]) && \
+	    !ismask($a.server.sfilter[$bm][from])) {
+	    continue
+	}
+
+	if (strlen($a.server.sfilter[$i][from]) > \
+	    strlen($a.server.sfilter[$bm][from])) {
+	    @:bmf = mf
+	    @:bm = i
+	    continue
+	}
+	# the default action at this point is to continue..
+    }
+
+    # great.  we've determined whether or not we have a match.  if we don't
+    # have a match, simply pass to the default display function for this
+    # sfilter type.
+    if (bm == -1) {
+	$(a.server.sfilter[$type][disp]) $type -1 $from $message
+	return
+    }
+    # if we do have a match, figure out what to do here
+
+    # display?
+    if (!a.server.sfilter[$bm][filter]) {
+	if (a.server.sfilter[$bm][win] != []) {
+	    @:win = a.server.sfilter[$bm][win]
+	}
+	if (win == []) {
+	    @:win = -1
+	}
+	$a.server.sfilter[$type][disp] $type $win $from $message
+    }
+
+    # log? (only if we display or an explicit request is made)
+    if (!a.server.sfilter[$bm][filter] || a.server.sfilter[$bm][log] != []) {
+	if (a.server.sfilter[$bm][log] != []) {
+	    @:logf = a.server.sfilter[$bm][log]
+	}
+	if (logf != [] && a.server.sfilter[$bm][log] != [-]) {
+	    $a.server.sfilter[$type][log] $type $logf $from $message
+	}
+    }
+}    
+
+### this is the default display function, which should work for just about
+### everything under the sun unless you want to do some really special
+### tweaking
+:new format server_message default server message format
+:form server_message flags i
+:form server_message arguments @type@ @from@ @msg@
+:form server_message xref comm:sfilter
+
+alias a.server.sfilter.display (type, win, from, msg) {
+    a.server.echo S $win $fparse(server_message $type $from $msg)
+}
+
+alias a.server.sfilter.log (type, file, from, msg) {
+    @a.log(server/$file $fparse(server_message $type $from $msg))
+}
+
+### the actual command
+:new command sfilter [add|del|list] [type] [options...]
+:comm sfilter desc server-message filtering utility
+:comm sfilter help \
+this is a rather complicated command which gives the user the ability to \
+create sophisticated filtering and logging systems for server messages, \
+tailored to the preferences of the user.  the grammar is fairly complex, but \
+can be summed up as having three basic commands: add, del, list.  the bulk of \
+the grammar works in each command (in different ways).  the following are the \
+statements available: %n\
+- on server <server> - only match if we're on the specified server%n\
+- on <network>       - only match if we're on the specified network%n\
+- from <sender>      - only match if the sender matches <sender>%n\
+- log <file>         - log message to the specified file%n\
+- nolog              - explicitly prevent any logging%n\
+- window <window>    - display message to the specified window%n\
+- filter             - do not display the message%n\
+- display            - display the message (default)%n\
+- match <pattern>    - only match if the message body matches <pattern>%n\
+                       (pattern may only be one word!  try using *s or ?s%n\
+                        instead of spaces for long patterns)%n\
+the grammar can be combined in any way, but does provide some quirks...  \
+if two filters exist with conflicting opinions on whether or not to show \
+a given message, the one with the most matching elements (on/from/match) \
+will be used, and if they have the same number, the one with the longest \
+pattern in match will be used.  this is all pretty complicated, so here are \
+a few examples:%n\
+/sfilter add kill from NickServ filter%n\
+^ filters all kills from NickServ%n\
+/sfilter add kline match *proxy* filters%n\
+^ filters all klines containing 'proxy'%n\
+/sfilter add chatops on dalnet from *squirrel* filter%n\
+^ filters all chatops from anyone whose nick matches *squirrel* on DALnet%n\
+/sfilter add snotice match *K-line*active*for* log <logfile> filter%n\
+^ filters all snotices regarding active klines while also logging them%n\
+/sfilter list types%n\
+^ special case to list supported filter types.%n\
+additionally, the decision on whether to filter or display a message by \
+default is made by the command depending on what conditions are passed.  if \
+the user passes window or log conditions, the default is 'display', however \
+if the user does not pass either of these conditions the default is 'filter'. \
+to delete filters, use the /sfilter list command to find the filter you want \
+to delete, then use /sfilter del <number> to get rid of it
+
+alias sfilter (comm, type, opts) {
+    if (comm == [add] && opts == []) {
+	@usage(sfilter)
+	return
+    }
+
+    if (comm != [] && !rmatch($comm add del list)) {
+	@usage(sfilter)
+	return
+    }
+
+    # special request, list our available types...
+    if (comm == [list] && type == [types]) {
+	a.list.start u 0 available filter types
+	for xx in ($sort($a.server.sfilter.types)) {
+	    a.list.add $xx
+	}
+	a.list.end
+	return
+    }
+
+    if (comm == [del]) {
+	if (!isnumber($type)) {
+	    @usage(sfilter)
+	    return
+	}
+	if (type > a.server.sfilter.count || type < 1) {
+	    aerrecho there is no sfilter #$type
+	    return
+	}
+	@:type--
+	for xx in ($aliasctl(assign match a.server.sfilter.$type\.)) {
+	    ^assign -$xx
+	}
+	@:type++
+	# now shift down anything above that.  yuck
+	for (@:i = type,i < a.server.sfilter.count,@:i++) {
+	    for xx in ($aliasctl(assign match a.server.sfilter.$i\.)) {
+		@a.server.sfilter[${i - 1}][$after(-1 . $xx)] = [$($xx)]
+		^assign -$xx
+	    }
+	}
+
+	@a.server.sfilter.count--
+	aecho deleted sfilter #$type
+	return
+    }
+
+    # parse our options and create our filter..
+    @:o = opts
+
+    # match defaults to '*' (matches all) as does from
+    @:from = :match = [*]
+    @:logf = :win = :onnet = :onserv = []
+
+    while (o != []) {
+	switch ($word(0 $o)) {
+	    (on) {
+		if (word(1 $o) == [server]) {
+		    @:onserv = word(2 $o)
+		    @:o = restw(3 $o)
+		} else {
+		    @:onnet = word(1 $o)
+		    @:o = restw(2 $o)
+		}
+	    }
+	    (from) {
+		@:from = word(1 $o)
+		@:o = restw(2 $o)
+	    }
+	    (log) {
+		@:logf = word(1 $o)
+		@:o = restw(2 $o)
+	    }
+	    (nolog) {
+		@:nolog = 1
+		@shift(:o)
+	    }
+	    (win) (window) {
+		@:win = word(1 $o)
+		@:o = restw(2 $o)
+	    }
+	    (filter) {
+		@:filt = 1
+		@shift(:o)
+	    }
+	    (display) {
+		@:filt = 0
+		@shift(:o)
+	    }
+	    (match) (matches) (matching) {
+		@:match = word(1 $o)
+		@:o = restw(2 $o)
+	    }
+	    (*) {
+		aerrecho unrecognized keyword \"$word(0 $o)\"
+		return
+	    }
+	}
+    }
+
+    if (comm == [list] || comm == []) {
+	# we only honor certain grammar bits here, specifically the 
+	# from/match/type ones
+	if (type == []) {
+	    @:type = [*]
+	}
+	@:pad = strlen($a.server.sfilter.count)
+	@:count = 0
+	a.box.start server filters
+	for (@:i = 0,i < a.server.sfilter.count,@:i++) {
+	    if (a.server.sfilter[$i][type] != type && type != [*]) {
+		continue
+	    }
+	    if (!match($from a.server.sfilter[$i][from])) {
+		continue
+	    }
+	    if (!match($match a.server.sfilter[$i][match])) {
+		continue
+	    }
+	    @:msg = a.server.sfilter[$i][type]
+	    @push(:msg from $a.server.sfilter[$i][from])
+	    @push(:msg match $a.server.sfilter[$i][match])
+	    if (a.server.sfilter[$i][net] != []) {
+		@push(:msg on $a.server.sfilter[$i][net])
+	    }
+	    if (a.server.sfilter[$i][serv] != []) {
+		@push(:msg on server $a.server.sfilter[$i][serv])
+	    }
+	    if (a.server.sfilter[$i][filter]) {
+		@push(:msg filter)
+	    } else {
+		@push(:msg display)
+	    }
+	    if (a.server.sfilter[$i][win] != []) {
+		@push(:msg window $a.server.sfilter[$i][win])
+	    }
+	    if (a.server.sfilter[$i][log] == [-]) {
+		@push(:msg nolog)
+	    }
+	    a.box.echo $[-$pad]{i + 1}\: $msg
+	    if (a.server.sfilter[$i][log] != [] && \
+		a.server.sfilter[$i][log] != [-]) {
+		a.box.echo $repeat($pad  )  log $a.server.sfilter[$i][log]
+	    }
+	    @:count++
+	}
+	a.box.end $count matches
+	return
+    }
+
+    if (findw($type $a.server.sfilter.types) == -1 && type != [*]) {
+	aerrecho no server filter for type \"$type\"
+	return
+    }
+
+    @:rule = a.server.sfilter.count++
+    @:msg = [added sfilter for ]
+    @a.server.sfilter[$rule][type] = type
+    @:msg #= [$type ]
+    if (filt == [] && (:logf != [] || win != [])) {
+	@a.server.sfilter[$rule][filter] = 0
+    } else if (filt == []) {
+	@a.server.sfilter[$rule][filter] = 1
+    } else {
+	@a.server.sfilter[$rule][filter] = filt
+    }
+    @a.server.sfilter[$rule][from] = from
+    @:msg #= [from $from ]
+    @a.server.sfilter[$rule][match] = match
+    @:msg #= [matching $match ]
+    # (the others may not be set)
+    if (:logf != []) {
+	@a.server.sfilter[$rule][log] = logf
+	@:msg #= [logging to $logf ]
+    } else if (nolog) {
+	@a.server.sfilter[$rule][log] = [-]
+	@:msg #= [no logging ]
+    }
+    if (win != []) {
+	@a.server.sfilter[$rule][win] = win
+	@:msg #= [displaying in $win ]
+    }
+    if (onserv != []) {
+	@a.server.sfilter[$rule][serv] = onserv
+	@:msg #= [on server $onserv ]
+    }
+    if (onnet != []) {
+	@a.server.sfilter[$rule][net] = onnet
+	@:msg #= [on network $onnet ]
+    }
+    aecho $msg
+}
+
+################################################################################
+### /who stuff, this actually just formats up who output and spits it out
+### with a count when the 315 numeric is received.
+
+:new command who [-vf] [stuff]
+:comm who desc perform a who request to the server
+:comm who aliases w
+:comm who help \
+this command performs a who request.  with the -v flag it displays extra \
+data (the realname info).  if the -f flag is given, a //who -flush is \
+performed prior to anything else being done.  in some circumstances, the rest \
+of the arguments will be passed verbatim to the client's internal /who \
+command, though if the server supports DALnet-extended or Undernet-extended \
+/who requests, the command will act as '//who -dx' or '//who -ux', \
+respectively.  To use the client's normal /who command, please use //who.
+
+mstub who
+
+^on ^yell ^"*You asked for an extended undernet request but didn't get one back.*"
+
+################################################################################
+### little notify wrappers, barely worth looking at
+^on ^notify_signon "*" {
+    @:net = a.network.get()
+    if (net == []) {
+	@:net = builtin_expando(S)
+    }
+    a.server.echo N 0 signon: $(hcol1)$0$(dcol1)\($(ncol)$sar(/@/$(dcol1)@$(ncol)/$1)$(dcol1)\) \($(ncol)on $(col1)$net$(dcol1)\)
+}
+
+^on ^notify_signoff "*" {
+    @:net = a.network.get()
+    if (net == []) {
+	@:net = builtin_expando(S)
+    }
+    a.server.echo N 0  signoff: $(hcol1)$0 $(dcol1)\($(ncol)on $(col1)$net$(dcol1)\)
+}
+
+################################################################################
+### links and map commands with wrappers.
+:new command links [-lts]
+:comm links desc retrieve and display links for a server
+:comm links xref conf:links_default_type
+:comm links help \
+this command retrieves a list of currently connected servers and attempts \
+to display them in a readable format.  if the -l flag is specified, the \
+output is in the (default) list format.  if the -t flag is specified, the \
+output is in a tablarized format with each column representing a hub. (this \
+can be excessively wide, not recommend for big networks/small screens).  if \
+the -s flag is specified, the output is in the same format as the server's \
+unformatted output.
+
+mstub links
+
+:new command map [server]
+:comm map desc retrieve and display a map of currently connected servers
+:comm map help \
+this command is much like the /links command, but it creates a \
+topographical map of servers instead of the abbreviated format of /links.  \
+if a server name is specified, the map will be created from the viewpoint \
+of that server
+
+mstub map
+
+:new config links_default_type default links display formatting
+:conf links_default_type flags w
+:conf links_default_type value l
+:conf links_default_type xref comm:links
+:conf links_default_type help \
+this option allows you to change the default display formatting the /links \
+command uses.  the available values are those of the flags to the /links \
+command, minus the '-' marker.
+
+################################################################################
+### lusers cruft, much enjoyableness.  provides a lot of trivial stats too
+
+^on ^251 "*" a.server.retrieve_lusers $*
+
+alias a.server.retrieve_lusers {
+    @a.server.lusers.server = [$0]
+    @a.server.lusers.guser = [${[$3] + [$6]}]
+    @a.server.lusers.ginvis = [$6]
+    @a.server.lusers.gserver = [$9]
+    @a.server.lusers.oper = a.server.lusers.channel = 0
+    ^on ^252 "*" {@a.server.lusers.oper = [$1]}
+    ^on ^253 ^"*"
+    ^on ^254 "*" {@a.server.lusers.channel = [$1]}
+    ^on ^255 "*" {
+	@a.server.lusers.luser = [$3]
+	@a.server.lusers.lserver = [$6]
+    }
+    ^on ^265 "*" {@a.server.lusers.lmax = [$6]}
+    ^on ^266 "*" {
+	@a.server.lusers.gmax = [$6]
+	a.server.finish_lusers
+    }
+    ^on ^250 "*" {@a.server.lusers.lmax = [$4]}
+    ^on ^server_notice "% % Highest connection count: *" {
+	@a.server.lusers.lmax = [$5]
+	a.server.finish_lusers
+    }
+}
+
+alias a.server.finish_lusers {
+    ### yes, I *am* ashamed at the length of these lines.
+    a.box.start lusers${a.server.lusers.server == builtin_expando(S) ? [] : [ $a.network.gss($a.server.lusers.server)]}
+    a.box.echo $(hcol1)g$(ncol)lobal   $(dcol):$(ncol) $a.server.lusers.guser $(dcol1)\($(col1)i$(ncol)nvis$(dcol):$(ncol) $a.server.lusers.ginvis $(dcol1)[$(ncol)$trunc(2 ${(a.server.lusers.ginvis / a.server.lusers.guser) * 100})%$(dcol1)]${a.server.lusers.gmax ? [ $(col1)m$(ncol)ax$(dcol1)\:$(ncol) $a.server.lusers.gmax $(dcol1)[$(ncol)$trunc(2 ${(a.server.lusers.gmax / a.server.lusers.guser) * 100})%$(dcol1)]\)] : [$(dcol1)\)]}
+    a.box.echo $(hcol1)l$(ncol)ocal    $(dcol1):$(ncol) $a.server.lusers.luser $(dcol1)[$(ncol)$trunc(2 ${(a.server.lusers.luser / a.server.lusers.guser) * 100})%$(dcol1)] \($(hcol1)m$(ncol)ax$(dcol1):$(ncol) $a.server.lusers.lmax$(dcol1)\)
+    if (a.server.lusers.oper) {
+	a.box.echo $(hcol1)o$(ncol)perators$(dcol1):$(ncol) $a.server.lusers.oper $(dcol1)[$(ncol)$trunc(2 ${(a.server.lusers.oper / a.server.lusers.guser) * 100})%$(dcol1)] \($(ncol)$trunc(2 ${a.server.lusers.guser / a.server.lusers.oper}) users$(dcol1)/$(ncol)oper$(dcol1)\)
+    }
+    if (a.server.lusers.channel) {
+	a.box.echo $(hcol1)c$(ncol)hannels $(dcol1):$(ncol) $a.server.lusers.channel $(dcol1)\($(ncol)$trunc(2 ${a.server.lusers.guser / a.server.lusers.channel}) users$(dcol1)/$(ncol)channel$(dcol1)\)
+    }
+    a.box.echo $(hcol1)s$(ncol)ervers  $(dcol1):$(ncol) $a.server.lusers.gserver $(dcol1)\($(ncol)$a.server.lusers.lserver local$(dcol1),$(ncol) $trunc(2 ${a.server.lusers.guser / a.server.lusers.gserver}) users$(dcol1)/$(ncol)server$(dcol1)\)
+    a.box.end
+
+    ^on 252 -"*"
+    ^on 253 -"*"
+    ^on 254 -"*"
+    ^on 255 -"*"
+    ^on 256 -"*"
+    ^on 265 -"*"
+    ^on 266 -"*"
+    ^on 250 -"*"
+    ^on ^server_notice -"% % Highest connection count: *"
+}
+
+################################################################################
+### server notice and oper crap.  meh.
+
+@a.server.sfilter.add(snotice a.server.sfilter.display a.server.sfilter.log)
+^on ^notice "%.% *" {
+    @a.server.sfilter(snotice $a.network.gss($0) $1-)
+}
+
+^on ^server_notice "%.% *" {
+    if ([$1 $2 $3] == [*** Notice --]) {
+	@a.server.sfilter(snotice $a.network.gss($0) $4-)
+    } else {
+	@a.server.sfilter(snotice $a.network.gss($0) $1-)
+    }
+}
+
+^on ^mode '% $servernick() *' {
+    if (ac.module.find(channel)) {
+	@:uh = userhost()
+	if (uh == []) {
+	    @:uh = [<unknown>@<unknonw>]
+	}
+	a.server.echo S 0 $fparse(cmode $0 $split(@ $uh) $servernick() $2-)
+    } else {
+	a.server.echo S 0 mode $1: $2- by $0
+    }
+    if (match(+*o* $2)) {
+	### we're an oper now, if we don't have the oper module loaded, load it
+	### now (unless 'autoload_oper' is off)
+	if (ac.config(autoload_oper) && !ac.module.find(oper)) {
+	    @ac.module.load(oper depend server)
+	}
+	//^mode $0 +$ac.config(oper_modes)
+    } elsif (match(-*o* $2)) {
+	if (ac.config(autoload_oper) && ac.module.find(oper)) {
+	    @ac.module.unload(oper r)
+	}
+	//^mode $0 -$ac.config(oper_modes)
+    }
+}
+
+################################################################################
+### kill parser
+@a.server.sfilter.add(kill a.server.kill.display a.server.kill.log)
+@a.server.sfilter.add(clonekill a.server.kill.display a.server.kill.log)
+
+:new format kill displayed when a kill is received
+:form kill arguments @oper@ @operhost@ @operserv@ @unick@ @uname@ @uhost@ @msg@
+
+:new format clonekill displayed when a clonekill is received
+:form clonekill arguments @oper@ @operhost@ @operserv@ @uhost@ @clones@ @msg@
+:form clonekill xref form:kill
+
+### kill parser
+^on ^kill * {
+    @:oper = [$2]
+
+    if (count(! $3) == 1) {
+	### only oper host/oper nick provided
+	@:ohost = before(! $3)
+	@:oserv = builtin_expando(S)
+    } else {
+	@:ohost = after(-1 ! $before(-1 ! $3))
+	if (ohost == []) {
+	    @:ohost = [unknown]
+	}
+
+	@:oserv = before(-2 ! $3)
+	if (index(! $oserv) != -1) {
+	    @:oserv = after(-1 ! $oserv)
+	}
+    }
+
+    if (oserv == []) {
+	@:oserv = [unknown]
+    }
+
+    if (index(. $oserv) != -1) {
+	@:oserv = a.network.gss($oserv)
+    }
+    if (index(. $oper) != -1) {
+	@:oper = a.network.gss($oper)
+    }
+
+    if (match(*!*@* $1)) {
+	@:user=gnuh(n $1)
+	@:uname=gnuh(u $1)
+	@:uhost=gnuh(h $1)
+    } else {
+	@:user = [$1]
+	@:uname = [<unknown>]
+	@:uhost = [<unknown>]
+    }
+
+    @:msg = rest(1 $chop(1 $4-))
+    if (match(*clone* $4-) || match(*clonin* $4-)) {
+	### a clonekill!
+	@:v=[oper_ck_$ac.encode($oper $uhost)]
+	@:t=ac.hash($uhost)
+	if (![$($(v)_count)]) {
+	    @$(v)_count=1
+	} else {
+	    @$(v)_count++
+	}
+
+	if (![$($(v)_nicks)]) {
+	    @$(v)_nicks=user
+	} else {
+	    @$(v)_nicks#=[ $user]
+	}
+
+	^timer -del $t
+	^timer -ref $t 10 a.server.clonekill.finish $oper $ohost $oserv $uhost $msg
+    } else {
+	@a.server.sfilter(kill $oper $ohost $oserv $user $uname $uhost $msg)
+    }
+}
+
+alias a.server.clonekill.finish {
+    @:v=ac.encode($0 $3)
+    @a.server.sfilter(clonekill $0-3 $(oper_ck_$(v)_count) $4)
+    ^assign -oper_ck_$v_count
+    ^assign -oper_ck_$v_nicks
+}
+
+alias a.server.kill.display (type, win, from, msg) {
+    if (win == -1) {
+	@:win = [operview]
+    }
+
+    switch ($type) {
+	(kill) {
+	    a.server.echo K $win $fparse(kill $from $msg)
+	}
+	(clonekill) {
+	    a.server.echo K $win $fparse(clonekill $from $msg)
+	}
+    }
+}
+
+alias a.server.kill.log (type, file, from, msg) {
+    switch ($type) {
+	(kill) {
+	    @a.log(server/$file $fparse(kill $from $msg))
+	}
+	(clonekill) {
+	    @a.log(server/$file $fparse(clonekill $from $msg))
+	}
+    }
+}
+
+################################################################################
+### configs
+:new config autoload_oper automatically (un)load the operator module when you (de)oper?
+:conf autoload_oper value 1
+:conf autoload_oper flags b
+
+:new config oper_modes modes to automatically set when opered
+:conf oper_modes value +sw
+:conf oper_modes flags s
+
+:new config user_modes modes to automatically set when connecting
+:conf user_modes value +i
+:conf user_modes flags w
+
+### lag checker below
+### I borrowed the code ideas from the status_lag script in EPIC's distro,
+### thanks to psykotyk for this
+
+alias a.server.lag_check {
+    ^set status_user4 ?
+    ^on ^raw_irc '$builtin_expando(S) PONG $builtin_expando(S) :*' {
+	//^set status_user4 ${time()-a.server.lag_pingtime}
+	^timer -refnum lagcheck $ac.config(lag_check_time) a.server.lag_check
+    }
+    @a.server.lag_pingtime=time()
+    ^quote ping $builtin_expando(S)
+}
+
+alias a.server.lag_check_time_chng_cmd {
+    ^timer -delete lagcheck
+    if (ac.config(lag_check_time)) {
+	^timer -refnum lagcheck $ac.config(lag_check_time) a.server.lag_check
+    } else {
+	//^set status_user4 off
+    }
+}
+
+^on #-connect $ac.hash(server) "*" {
+    ^timer -delete lagcheck
+    if (ac.config(lag_check_time)) {
+	^timer -refnum lagcheck $ac.config(lag_check_time) a.server.lag_check
+    }
+}
+
+:new config lag_check_time interval (in seconds) between lag checks (0 turns it off)
+:conf lag_check_time value 20
+:conf lag_check_time flags n
+:conf lag_check_time change_cmd a.server.lag_check_time_chng_cmd
+
+################################################################################
+### orignick stuff
+:new command orignick [[-]network] [nick]
+:comm orignick desc this provides a way to try and keep a nickname on a server
+:comm orignick aliases keepnick
+:comm orignick flags i
+:comm orignick help \
+this command is provided to try to maintain a nick on a given network. \
+if no arguments are given, it lists the current nicks to be kept on \
+various networks, otherwise you are required to give a network and a nick, \
+and the script will then attempt to regain that nick if you are on that \
+network from then on.  if you want to keep a nick on all networks, simply \
+specify the network as '*' (without quotes).  To remove a nick from the \
+keep list, simply place a - before the network (e.g. /orignick -efnet). \
+to see what the nick for a given network is, specify only the network.
+
+alias orignick (network, nick) {
+    if (network == []) {
+	if (ac.config(orignick) != []) {
+	    aecho current nick to keep everywhere is $ac.config(orignick)
+	}
+	a.server.orignick_list
+	return
+    } 
+    if (network == [*]) {
+	config orignick $nick
+	return
+    } elsif (left(1 $network) == [-]) {
+	@:network = after(- $network)
+	aecho removed keep nick \($a.server.orignick[$network]\) for $network
+	^assign -a.server.orignick[$network]
+	return
+    } elsif (findw($network $a.network.list) == -1) {
+	aerrecho unknown network $network
+	return
+    }
+    if (nick == []) {
+	if (a.server.orignick[$network] != []) {
+	    aecho current nick to keep on $network is $a.server.orignick[$network]
+	} else {
+	    aecho there is no nick held on $network
+	}
+	return
+    } else {
+	if (a.server.orignick[$network] != []) {
+	    aecho changing keep nick for $network from $a.server.orignick[$network] to $nick
+	} else {
+	    aecho setting keep nick on $network to $nick
+	}
+	@a.server.orignick[$network] = nick
+    }
+}
+
+^eval on #-hook $ac.hash(server) "network.connect *" {
+    if (a.server.orignick[$1]) {
+	userhost $a.server.orignick[$1] -cmd a.server.orignick_uh $$*
+    } elsif (ac.config(orignick) != []) {
+	userhost $ac.config(orignick) -cmd a.server.orignick_uh $$*
+    }
+}
+
+:new config orignick if set, it tries to keep the client on this nick all the time
+:conf orignick value
+:conf orignick flags w
+
+alias a.server.orignick_uh (nick, oper, away, user, host) {
+    if (user == [<UNKNOWN>] && host == [<UNKNOWN>]) {
+	nick $nick
+    } else {
+	^timer -refnum orignick$servernum() 10 userhost $nick -cmd a.server.orignick_uh $$$$*
+    }
+}
+
+alias a.server.orignick_list {
+    a.list.start u 2 keep nicks
+    a.list.hdr network
+    a.list.hdr nickname
+    fe ($a.network.list) xx {
+	if (a.server.orignick[$xx] != []) {
+	    a.list.add $xx
+	    a.list.add $a.server.orignick[$xx]
+	}
+    }
+    a.list.end
+}
+
+################################################################################
+### server ping
+
+:new command sping [server]
+:comm sping desc performs a 'ping' on a server
+:comm sping help \
+this command "pings" a server through a little bit of magic.  if no server \
+is specified, the current server is pinged.
+
+alias sping (server) {
+    if (server == []) @:server = builtin_expando(S)
+
+    @a.server.sping #= [$server $utime() ]
+    quote ping $server $server
+}
+
+^on ^pong "% % %" {
+    @:ind = findw($0 $a.server.sping)
+    if (ind == -1) {
+	aecho $0\: PONG received from $1 \($2\)
+    } else {
+	@:ut = utime()
+	@:usec = word(${ind + 2} $a.server.sping)
+	@:sec = word(${ind + 1} $a.server.sping)
+	@a.server.sping = remw($0 $remw($sec $remw($usec $a.server.sping)))
+	@:sec = word(0 $ut) - sec
+	@:usec = word(1 $ut) - usec
+
+	if (usec < 0) {
+	    @:usec += 1000000 , sec--
+	}
+	@:sec = tdiff3($sec)
+	if (pass(s $sec) == []) {
+	    @:sec = [${sec}0.$left(3 $usec)s]
+	} else {
+	    @:sec = [$before(s $sec).$left(3 $usec)s]
+	}
+	a.server.echo P 0 lag to server $1 is $sec
+    }
+}
+
+################################################################################
+### version-handling
+alias a.server.vercheck (version) {
+    if (match(bahamut* $version)) {
+	^eval load $apath/share/server/bahamut
+	aecho loading special support for bahamut
+    } else if (match(*hybrid* $version)) {
+        ^eval load $apath/share/server/hybrid
+        aecho loading special support for hybrid
+    } else if (match(*ratbox* $version)) {
+        ^eval load $apath/share/server/ratbox
+        aecho loading special support for ratbox
+    } else if (match(*ithildin* $version)) {
+	^eval load $apath/share/server/ithildin
+	aecho loading special support for ithildin
+    }
+}
+^eval on #-004 -$ac.hash(server) "*" {
+    @a.server.vercheck($builtin_expando(R))
+    //^mode $servernick() +$ac.config(user_modes)
+}
+@a.server.vercheck($builtin_expando(R))
+
+################################################################################
+### /stats
+
+@a.server.stats.count = 0
+
+^on ^211 "% % SendQ *" {
+    @a.server.stats.type = [L]
+    a.list.start u 3 stats l for $a.network.gss($0)
+    a.list.hdr server
+    a.list.hdr sendq
+    a.list.hdr conn len
+}
+
+^on ^211 "% % % *" {
+    if (a.server.stats.type == []) {
+	a.box.start stats ? for $a.network.gss($0)
+	a.list.start hu 3
+	a.list.hdr server
+	a.list.hdr sendq
+	a.list.hdr conn len
+	@a.server.stats.type = [?]
+    }
+    if (index(. $before(\[ $1)) != -1) {
+	a.list.add $a.network.gss($before(\[ $1))
+    } else {
+	a.list.add $1
+    }
+    a.list.add $2
+    a.list.add $tdiff3($7)
+    @a.server.stats.count++
+}
+
+# for /stats ?
+^on ^249 ^"% % total server%"
+^on ^249 ^"% ???? total : *"
+^on ^249 ^"% *Zip inbytes %, outbytes % *"
+^on ^249 "% Server ????: *" {
+    @push(a.server.stats.data $3$tolower($left(1 $4)))
+    @push(a.server.stats.data $word(0 $strip(\(\) $5-)))
+}
+
+### amusingly, 219 is used as the end of stats marker for...everything
+### so, joy of joys, we get to collect data for everything.
+###
+### (counter idea taken from odelay/adm@hellhole.net)
+
+^on ^219 "*" {
+    @:count = a.server.stats.count
+    @a.server.stats.count = 0
+    if (a.server.stats.type == []) {
+	a.server.echo $1 -1 end of /STATS $1 report. \($count matches\)
+	return
+    }
+    switch ($a.server.stats.type) {
+	(l) {
+	    a.list.end
+	}
+	(?) {
+	    a.list.end
+	    a.box.echo
+	    a.box.echo server sent: $word(0 $a.server.stats.data)b \($word(1 $a.server.stats.data)kBps\)
+	    a.box.echo server recv: $word(2 $a.server.stats.data)b \($word(3 $a.server.stats.data)kBps\)
+	    a.box.end
+	    ^assign -a.server.stats.data
+	}
+    }
+    ^assign -a.server.stats.type
+}
+
+### idea/code taken from odelay/adm@hellhole.net
+### default formating, allows for counting (see above ^219)
+### (cleaned up a bit)
+
+alias a.server.stats (type, data) {
+    a.server.echo $type -1 $data
+    @a.server.stats.count++
+}
+on ^213 "*" {a.server.stats $1-}
+on ^214 "*" {a.server.stats $1-}
+on ^215 "*" {a.server.stats $1-}
+on ^216 "*" {a.server.stats $1-}
+on ^217 "*" {a.server.stats $1-}
+on ^218 "*" {a.server.stats $1-}
+on ^225 "*" {a.server.stats $1-}
+on ^227 "*" {a.server.stats $1-}
+on ^243 "*" {a.server.stats $1-}
+on ^244 "*" {a.server.stats $1-}
+
+################################################################################
+### other stuff
+alias a.server.save {
+    @:fd = a.save.open($apath/etc/server.orignicks keep nicks)
+    if (fd == -1) {
+	return
+    }
+    fe ($a.network.list) xx {
+	if (a.server.orignick[$xx] != []) {
+	    @write($fd @a.server.orignick[$xx] = [$a.server.orignick[$xx]])
+	}
+    }
+    @close($fd)
+
+    # and sfilters.  ew.
+    if (a.server.sfilter.count) {
+	@:fd = a.save.open($apath/etc/server.sfilter server filters)
+	if (fd == -1) {
+	    return
+	}
+	for (@:i = 0,i < a.server.sfilter.count,@:i++) {
+	    for xx in ($aliasctl(assign match a.server.sfilter.$i\.)) {
+		@write($fd @$xx = [$($xx)])
+	    }
+	}
+	@write($fd @a.server.sfilter.count = [$a.server.sfilter.count])
+	@close($fd)
+    }
+}
+
+if (fexist($apath/etc/server.orignicks) != -1) {
+    ^eval load $apath/etc/server.orignicks
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

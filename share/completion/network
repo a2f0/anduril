@@ -1,0 +1,6 @@
+@a.completion.add(ninfo %"a.network.list")
+
+@a.completion.add(nlist %"a.network.list")
+@a.completion.add(nlist -s %"a.network.list")
+
+@a.completion.add(newnetwork)

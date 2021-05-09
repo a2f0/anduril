@@ -1,0 +1,275 @@
+### $Id: update.stubs,v 1.24 2004/01/21 07:45:04 wd Exp $
+ac.package update
+
+# this gets a file via http and places its contents in the 'a.update.file'
+# variable, and calls the given callback when done retrieving.  this
+# shouldn't be used for anything that isn't a flat text file.
+alias a.update.get (file, callback) {
+    @a.update.filename = file
+    @a.update.file = []
+    @a.update.filecall = callback
+    ^on ^dcc_raw "% anduril.org e %" {
+	//^dcc raw $0 $1 GET http://anduril.org/script/rel/$a.update.filename
+    }
+    ^on ^dcc_raw "% anduril.org d *" {
+	@:gunk = strip("$chr(13)" $3-)
+	if (gunk == [<file>]) {
+	    @a.update.readsave = 1
+	} elsif (a.update.readsave) {
+	    if (gunk == [</file>]) {
+		@a.update.readsave = 0
+	    } else {
+		@push(a.update.file $gunk)
+	    }
+	}
+    }
+    ^on ^dcc_raw "% anduril.org c" {
+	^on dcc_raw -"% anduril.org e %"
+	^on dcc_raw -"% anduril.org d *"
+	^on dcc_raw -"% anduril.org c"
+	defer $(a.update.filecall) $a.update.file
+    }
+    if (connect(anduril.org 80) == []) {
+	aerrecho cannot connect to http://anduril.org to get version data
+	^on dcc_raw -"% anduril.org e %"
+	^on dcc_raw -"% anduril.org d *"
+	^on dcc_raw -"% anduril.org c"
+    }
+}
+
+# this function gets called when a file needs to be downloaded.  it takes
+# three arguments: the place to put the file, the name of the file, and the
+# function to call when the file is done
+alias a.update.fetch (where, file, callback) {
+    @:name = [update$hash($file)]
+    @a.update.fetchdir = where
+    @a.update.fetch = file
+    @a.update.fetchcall = callback
+
+    @from = [http://anduril.org/script/rel/$left(3 $aversion)/current/$file]
+    ^on ^exec_exit "$name % %" {
+	^on exec -"$0 *"
+	^on exec_exit -"$0 % %"
+	if ([$2] != 0) {
+	    aerrecho there was some problem downloading the file $a.update.fetch
+	    aerrecho to $a.update.fetchdir\.  you might want to investiage
+	    return
+	} else {
+	    defer $(a.update.fetchcall) $a.update.fetchdir $a.update.fetch
+	}
+    }
+    ^on ^exec ^"$name *"
+    ^exec -direct -name $name $msar(g!@file@!$where/$file!@url@!$from!$a.update.method)
+    wait %$name
+}
+
+alias update (flags, modules) {
+    @a.update.check = a.update.force = a.update.verbose = 0
+    if (left(1 $flags) == [-]) {
+	fec ($flags) xx {
+	    switch ($xx) {
+		(c) {
+		    @a.update.check = 1
+		}
+		(f) {
+		    @a.update.force = 1
+		}
+		(m) {
+		    @:modules = ac.module.list
+		}
+		(v) {
+		    @a.update.verbose = 1
+		}
+	    }
+	}
+    } else if (flags != []) {
+        if (modules != []) {
+            @:modules = [$flags $modules]
+        } else {
+            @:modules = flags
+        }
+    }
+
+    if (a.update.method == []) {
+	@a.update.check = 1
+    }
+    if (numwords($modules))  {
+	@a.update.only = modules
+    } else {
+	if (a.update.force) {
+	    aerrecho must specify modules to force-download!
+	    return
+	}
+	^assign -a.update.only
+    }
+    a.update.get versions a.update.mversions
+}
+
+alias a.update.mversions (versions) {
+    @:ver = left(3 $aversion)
+
+    if (findw($ver $versions) == -1) {
+	aerrecho you either have a very old, or a very new \(alpha/beta\)
+	aerrecho version of the script.  the following versions are available
+	aerrecho for updates: $versions
+	return
+    }
+
+    # check to see if a newer release is available
+    @:newer = []
+    fe ($versions) xx {
+	if (a.update.compver($ver $xx) == -1) {
+	    @:newer = xx
+	}
+    }
+    if (newer != []) {
+	aecho NOTICE: there is a newer branch of the script available \($newer\)
+	aecho it would probably be best to download and install it when convenient.
+    }
+    ### okay, we can check out the versions for our particular branch now.
+    a.update.get $ver/current/versions a.update.cversions
+}
+
+alias a.update.cversions (versions) {
+    @a.update.newmods = []
+    fe ($versions) type name ver {
+	if (type == [script] && a.update.only == []) {
+	    if (a.update.compver($aversion $ver) != -1) {
+		if (a.update.check) {
+		    aecho your release is up-to-date overall
+		}
+	    } else {
+		aecho there is a newer release available \($ver\)
+		if (!a.update.check) {
+		    aecho downloading and installing new version
+		    a.update.fetch $apath/.. anduril.tar.gz a.update.newrel
+		    return
+		}
+	    }
+	} elsif (type == [core]) {
+	    if (a.update.compver($ac.version $ver) != -1) {
+		if (a.update.check) {
+		    aecho your core files are up-to-date
+		}
+	    } else {
+		aecho there is a newer set of core files available
+		if (!a.update.check) {
+		    aecho downloading and installing new files
+		    a.update.fetch $apath core.tar.gz a.update.newrel
+		}
+	    }
+	} elsif (type == [module] && \
+		(findw($name $a.update.only) != -1 || a.update.only == [])) {
+	    # get the version by examining the file.  if the file doesn't
+	    # exist, proclaim it as a new and what-not
+	    if (fexist($apath/modules/$name/$name\.am) == -1) {
+		@:mver = 0
+	    } else {
+		@:mfd = open($apath/modules/$name/$name\.am R)
+		@:mver = ver
+		while (!eof($mfd)) {
+		    @:mline = read($mfd)
+		    if (match(:mod* $word(0 $mline)) && \
+			word(2 $mline) == [version]) {
+			@:mver = word(3 $mline)
+			@close($mfd)
+			break
+		    }
+		}
+		@close($mfd)
+	    }
+	    # now, if the module is loaded, but its version is older than
+	    # the file's version, and the file's version is >= the new
+	    # version being offered, don't do the download
+	    if (ac.module.find($name) && mver >= ver && \
+		modules[$name][version] < mver && !a.update.force) {
+		aecho module $name is out-of-date but the local copy is up-to-date, using that.
+		rlmod $name
+	    } elsif (mver < ver || a.update.force) {
+		if (a.update.force && !(mver < ver)) {
+		    aecho forcing download of module $name
+		} else {
+		    if (mver == 0) {
+			aecho module $name does not exist on your system
+		    } else {
+			aecho module $name is out-of-date \(you have $mver, version $ver is available\)
+		    }
+		}
+		@a.update.newmods = [x]
+		if (!a.update.check) {
+		    aecho downloading and installing version $ver of module $name
+		    a.update.fetch $apath modules/$name\.tar.gz a.update.newmod
+		}
+	    }
+	}
+    }
+    if (a.update.newmods == []) {
+	aecho all your modules are up-to-date
+    } elsif (!a.update.check) {
+	a.update.fetch $apath CHANGES a.update.changes
+    }
+}
+
+alias a.update.newrel (where, file) {
+    stack push set notify_on_termination
+    //^set notify_on_termination off
+    ^exec -name update cd $where && tar -zxf $file
+    wait %update
+    ^exec -name update rm $where/$file
+    wait %update
+    stack pop set notify_on_termination
+
+    if (file == [core.tar.gz]) {
+	aecho reloading core files
+	fe ($glob($apath/core/*)) xx {
+	    load $xx
+	}
+	return
+    }
+    if (!a.update.auto) {
+	aecho now you can re-load the script to complete the update.  you do
+	aecho not need to exit to do this, however, if you have unsaved
+	aecho settings it would be wise to say no here, save them (/asave),
+	aecho then /load $apath/anduril.irc on your own.
+	@:rl = ac.question(load the new script version? [y/N]: )
+	if (left(1 $rl) == [y]) {
+	    //^load $apath/anduril.irc
+	}
+    }
+}
+
+alias a.update.newmod (where, file) {
+    stack push set notify_on_termination
+    //^set notify_on_termination off
+    ^exec -name update cd $apath && tar -zxf $where/$file
+    wait %update
+    ^exec -name update rm $where/$file
+    wait %update
+    stack pop set notify_on_termination
+
+    @:mod = after(/ $before(. $file))
+    if (ac.module.find($mod)) {
+	rlmod $mod
+    }
+}
+
+alias a.update.changes (wheree, file) {
+    aecho please review the $apath/CHANGES file for new information
+}
+
+# compare versions. a < b < g < r for tags, returns 1 if ours is > theirs, 0
+# if ours == theirs, or -1 if theirs > ours
+alias a.update.compver (ours, theirs) {
+    @:ot = tr(/abgr/1234/$ours)
+    @:tt = tr(/abgr/1234/$theirs)
+
+    if (ot > tt) {
+	return 1
+    } elsif (ot == tt) {
+	return 0
+    } else {
+	return -1
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

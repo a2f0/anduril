@@ -1,0 +1,104 @@
+------------------------------------------------------------------------------ 
+$Id: format,v 1.4 2001/10/28 10:11:51 wd Exp $
+------------------------------------------------------------------------------
+
+[IMPORTANT NOTE]: the behavior of the format changer is dependant completely
+on implementation.  The format module that comes with anduril is compliant
+with all specifications below.
+
+Formats, also, are a hybrid of ircII script and anduril parsing (yeah,
+excitement).  Formats are not much in-line with ircII, though.  Also, keep
+in mind, formats are pretty useless unless you have something else scripted
+to *display* the formats ;)
+
+There are two parts to formats, adding a whole new type of format (i.e.
+join), and adding a new format to an existing type.
+
+Also, you can specify your own function(alias) to display your formats, this
+is handy for box formats, status bars, and other things where there are more
+than one line per format.
+
+All formats must belong to a module, thus they must be declared in a
+#:module/#:!module pair.  This is not true for individual formats, however.
+Additionally, they can be within a #:command/#:!command container, for
+organizational purposes.  Format type names will be cut off at 20 characters.
+
+Formats (found in the canonical places) are loaded after modules, but if you
+want to add default formats in your modules (which, of course, is do-able,
+;), do so after adding formats of course.
+
+Okay, so, how do I add these neat formats?! It's a lot like modules, read
+on:
+
+Again, all formats must be documented in a specific manner, they need a name
+a description, and a list of format identifiers and what they translate to
+in fparse arguments...fun stuff.
+
+Keywords are as follows:
+
+:new form[at] <name> [description]
+ - each format name must be exactly one word
+ - description can be any length/format, and is not required
+
+:form[at] <name> desc <description>
+ - same as above for description
+
+:form[at] <name> arguments <symbols>
+ - this causes the symbol text to be replaced with an $n identifier, where n
+   is a number from 0 on which is the argument number that corresponds to
+   what the symbol should be replaced with in fparse() calls.  Confused? 
+   see the example.
+ - It's not required, but I recommend symbols that look something like
+   @thing@ (i.e. @channel@, @nick@, etc)
+
+:form[at] <name> flags <flags>
+ - this sets internal flags on the format, these are as follows
+   i - "important" format, this means it is listed not only in formats for
+       the module, but in formats for the script overall.  Please only use
+       this for stuff that's really important
+   % - invisible!  this is useful when you have several formats which really
+       only represent one thing, such as boxes, status bars, and other such
+       abominations.
+
+:form[at] <name> display_command <command_name>
+ - this sets the command used to display the format, normally we simply
+   pass along the format with a list of the arguments, but you can do
+   otherwise, if you like.  Again handy for multiline formats where you
+   actually want to display them all when a request comes for only one.
+   The calling syntax is: <command> <formatname> <format index #>.  As
+   a side note, the format is already set for you so you can simply run
+   fparses if you like.  it will be set back to the normal format after
+   the display is over.
+
+:form[at] <name> set_command <command_name>
+ - this sets the command used to actually change the format.  It is
+   only passed the index number of the format to change to, but this
+   number is error checked.  This is not a required command.
+   NB: this command is performed IN ADDITION TO the fset() call, the
+       fset call occurs (should occur) before the set_command call
+
+:form[at] <name> list_command <command_name>
+ - this sets the command used to list the available formats for the
+   specified type.  it is not required, and in fact is something that
+   should only be used for very short formats (e.g. echo strings),
+   or very long formats (scans and statusbars) this command is intended
+   to be performed instead of listing the contents from an /flist command.
+       
+:form[at] <name> slaves <formats>
+ - this sets any formats that should be set along with the setting of this
+   one,
+   NB: for this to behave right you need to add your formats in a sane
+       order, because the setter (at least mine) can't hunt out which slave
+       formats go together with which non-slave formats
+
+:form[at] <name> xref <stuff>
+ - see the information in the 'command' file about cross-references
+
+
+------------------------------------------------------------------------------
+
+Formats should be placed in the module directory's 'formats' file with the
+following syntax:
+
+a.add_format <name> <format>
+

@@ -1,0 +1,17 @@
+@a.completion.add(dcc chat %N)
+@a.completion.add(dcc close %'send,chat,get' %N)
+@a.completion.add(dcc closeall) 
+@a.completion.add(dcc get %N)
+@a.completion.add(dcc list)
+@a.completion.add(dcc resume %N %f)
+@a.completion.add(dcc send %N %[,]f)
+
+@a.completion.add(dchat %N)
+
+@a.completion.add(dget %N)
+
+@a.completion.add(dlist)
+
+@a.completion.add(dsend %N %[,]f)
+
+@a.completion.add(dlpath %+ %f %+)

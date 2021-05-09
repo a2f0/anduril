@@ -1,0 +1,31 @@
+### $Id: template.am,v 1.2 2001/02/12 03:16:51 wd Exp $
+
+### this is purely an EXAMPLE TEMPLATE, it has no use whatsoever, copy it
+### over and edit it to suit your needs.
+
+#:module template
+#:version 1.0
+#:desc Template Module
+#:author your@email your_nick your name
+#:depend
+
+#:command template
+#:desc template command
+#:aliases tmpl
+#:flags
+#:help EHELP
+#:this is a command template
+#:EHELP
+#:!command
+
+### formats here!
+#:format template_format template format
+#:arguments @stuff@
+#:!format_type
+
+### configs here!
+#:config template_config template config
+#:flags
+#:!config
+
+#:!module

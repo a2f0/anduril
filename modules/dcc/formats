@@ -1,0 +1,37 @@
+# formats for type dcc_chat and slaves dcc_chat_send
+ac.format.add             dcc_chat $(dcol1)[$(col2)dcc$(dcol1)\($(hcol2)@from@$(dcol1))]%n @msg@
+ac.format.add        dcc_chat_send $(dcol1)[$(hcol2)@to@$(dcol1)]%n @msg@
+# ---
+
+# formats for type dcc_offer
+ac.format.add            dcc_offer dcc$(dcol1)\($(col1)offer$(dcol1)/$(hcol1)@type@$(dcol1))%n: $(hcol1)@to@%n ${[@file@] ? [$(dcol1)\(%n@file@ $(dcol1)\($(col1)@size@$(dcol1)))] : []}
+# ---
+
+# formats for type dcc_request
+ac.format.add          dcc_request dcc$(dcol1)\($(col1)request$(dcol1)/$(hcol1)@type@$(dcol1))%n: $(hcol1)@from@$(dcol1)[$(col1)@ip@$(dcol1):%n@port@$(dcol1)] ${[@file@] ? [\(%n@file@ $(dcol1)\($(col1)@size@$(dcol1)))] : []}
+# ---
+
+# formats for type dcc_connect
+ac.format.add          dcc_connect dcc$(dcol1)\($(col1)connect$(dcol1)/$(hcol1)@type@$(dcol1))%n: $(hcol1)@to@$(dcol1)[$(col1)@ip@$(dcol1):%n@port@$(dcol1)] ${[@file@] ? [\(%n@file@ $(dcol1)\($(col1)@size@$(dcol1)))] : []}
+# ---
+
+# formats for type dcc_lost_file
+ac.format.add        dcc_lost_file dcc$(dcol1)\($(col1)disconn$(dcol1)/$(hcol1)@type@$(dcol1))%n: $(hcol1)@to@ $(dcol1)\(%n@file@ $(dcol1)\(%n@reason@${[@rate@]!=[0] ? [; $(hcol1)@rate@$(col1)kb/s] : []}$(dcol1)))
+# ---
+
+# formats for type dcc_lost_chat
+ac.format.add        dcc_lost_chat dcc$(dcol1)\($(col1)disconn$(dcol1)/$(hcol1)CHAT$(dcol1))%n: $(hcol1)@to@ $(dcol1)\(%n@reason@$(dcol1))
+# ---
+
+# formats for type dcc_list_hdr
+ac.format.add         dcc_list_hdr $(dcol1)[%ntype$(dcol1)] [%nstat$(dcol1)] [%nto          $(dcol1)] [%nlength    $(dcol1)] [%ndone  $(dcol1)] [%nrate       $(dcol1)] [%nfile$(dcol1)]
+# ---
+
+# formats for type dcc_list_file
+ac.format.add        dcc_list_file $(dcol1)[$(hcol1)$pad(-4 " " @type@)$(dcol1)] [$(col1)$pad(-4 " " @status@)$(dcol1)] $(dcol1)[%n$pad(12 " " $left(12 @to@))$(dcol1)] [%n$pad(10 " " $tdiff3(${time() - [@started@]}))$(dcol1)] [$(hcol1)$pad(-5 " " @pct@)$(col1)%%$(dcol1)] [$(col1)$ac.len(-9 @rate@)$(dcol1)/%ns$(dcol1)]$chr(10)$(dcol1)[%n@file@$(dcol1)]
+# ---
+
+# formats for type dcc_list_chat
+ac.format.add        dcc_list_chat $(dcol1)[$(hcol1)CHAT$(dcol1)] [$(col1)$pad(-4 " " @status@)$(dcol1)] $(dcol1)[%n$pad(12 " " $left(12 @to@))$(dcol1)] [$(col1) $pad(10 " " $tdiff3(${time() - [@started@]}))$(dcol1)]
+# ---
+

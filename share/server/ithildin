@@ -1,0 +1,35 @@
+# $Id: ithildin,v 1.4 2003/05/25 01:29:10 wd Exp $
+
+:module server set
+ac.package server
+
+eval load $apath/share/server/cmd.samode
+eval load $apath/share/server/cmd.services
+eval load $apath/share/server/msg.ops
+
+:new command xinfo [stuff]
+:comm samode desc performs a raw XINFO command
+:comm samode flags
+:comm samode xref
+:comm samode help \
+this command simply sends a direct XINFO query to the server with your given \
+arguments.
+
+alias xinfo {
+    quote XINFO $*
+}
+
+:new command flags [flags]
+:comm samode desc performs a raw FLAGS command
+:comm samode flags
+:comm samode xref
+:comm samode help \
+this command simply sends a direct FLAGS query to the server with your given \
+arguments.
+
+alias flags {
+    quote FLAGS $*
+}
+
+:module server unset
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

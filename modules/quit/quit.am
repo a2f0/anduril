@@ -1,0 +1,44 @@
+### $Id: quit.am,v 1.11 2001/06/25 22:57:00 wd Exp $
+
+:new module quit
+:mod quit version 15
+:mod quit desc puts purrty random quit messages in!
+:mod quit author wd@anduril.org White_Dragon Chip Norkus
+
+:new command quit [message]
+:comm quit desc exits the client with the given message, or a random/set one
+:comm quit aliases bye exit signoff
+:comm quit help \
+basically, it signs off the client.  if you give it a message, it uses \
+that.  If you don't, and you have a default, it uses that, if neither of \
+those is true it tries to get a random message from the file \
+share/messages, finally, if it can't do that, it uses the client's default
+
+alias quit {
+	if ([$0]) {
+		//quit $fparse(quit_msg $0-)
+	}{
+		@:m=ac.config(quit_msg)
+		if (m) {
+			//quit $fparse(quit_msg $m)
+		}
+		if (ac.config(random_quit)) {
+			//quit $fparse(quit_msg $randread($apath/share/reasons/quit))
+		}{
+			//quit $fparse(quit_msg $QUIT_MESSAGE)
+		}
+	}
+}
+
+:new format quit_msg format for quit messages
+:form quit_msg flags i
+:form quit_msg arguments @msg@
+
+:new config quit_msg default quit message
+:conf quit_msg flags si
+
+:new config random_quit use random quit messages
+:conf random_quit flags bit
+:conf random_quit value 1
+
+# vim: syntax=off ts=3 ai smartindent

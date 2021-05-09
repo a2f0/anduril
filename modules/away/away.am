@@ -1,0 +1,243 @@
+### $Id: away.am,v 1.33 2002/06/18 00:06:47 wd Exp $
+
+:new module away
+:mod away version 59
+:mod away author wd@anduril.org White_Dragon Chip Norkus
+:mod away desc away displayer and logger.
+:mod away dep usage log msg
+
+:new format away message sent to channels when you set away
+:form away slaves away_idle back
+:form away flags i
+:form away arguments @log@ @pager@ @msg@
+
+:new format away_idle away message used when you are set away by idling
+:form away_idle arguments @time@
+:form away_idle flags %
+
+:new format back message sent to channels when you return
+:form back arguments @gonefor@ @msg@
+:form back flags %
+
+:new command away [message] 
+:comm away desc sets you away
+:comm away aliases a
+:comm away flags i
+:comm away help \
+this command sets you away on the current IRC server with the specified \
+message, or if one is not specified, with the default away message if that \
+is specified, (away_msg) or if that isn't specified either, a random message \
+if random_away is set, or no message at all.
+
+:new config random_away use a random away message?
+:conf random_away value 1
+:conf random_away flags bt
+
+:new config away_msg always use this away message?
+:conf away_msg value
+:conf away_msg flags si
+
+mstub away
+
+:new command back [message]
+:comm back desc sets you back
+:comm back flags i
+:comm back help \
+this command sets you back (not away)  on the current IRC server with the \
+specified message, or if one is not specified, with the default back \
+message if that is specified, (back_msg) or if that isn't specified either, \
+a random message if random_back is set, or no message at all. 
+
+:new config random_back use a random away message?
+:conf random_back value 1
+:conf random_back flags bt
+
+:new config back_msg always use this away message?
+:conf back_msg value
+:conf back_msg flags si
+
+mstub back
+
+:new command readlog [pid]
+:comm readlog desc reads the away log for a pid
+:comm readlog aliases rl
+:comm readlog flags i
+:comm readlog help \
+this command displays the away log for a pid, if specified, or the current \
+one. it creates a new hidden window for this purpose, and deletes it when \
+the reading is finished (unless the config away_log_window is off).  logs \
+can be deleted with the command /remlog
+
+:new config away_log_window create a new window to show the away log in?
+:conf away_log_window value 1
+:conf away_log_window flags bit
+
+
+mstub readlog
+
+:new command rmlog [pid]
+:comm rmlog desc removes an away log
+:comm rmlog flags i
+:comm rmlog help \
+this command removes the away log for the current (or specified) pid
+
+mstub rmlog
+
+^on ^305 ^"*"
+^on ^306 ^"*"
+
+alias a.away.idle_chng_cmd {
+    if ([$1]) {
+	^on idle -"$1"
+    }
+    if (ac.config(away_idle)) {
+	^on ^idle "$ac.config(away_idle)" {
+	    if (builtin_expando(A) == [] && ac.config(autoaway)) {
+		away $fparse(away_idle $ac.config(away_idle))
+	    }
+	}
+    }
+}
+
+alias a.away.pager_chng_cmd {
+    if ([$1]) {
+	^on ^raw_irc -"% PRIVMSG % :PAGE"
+    }
+    if (ac.config(pager)) {
+	 ^on ^raw_irc "% PRIVMSG % :PAGE" {
+	     if ([$2] == servernick()) {
+		 aecho $0 is paging you \($a.timestamp(1 long)\)
+		 beep
+		 if (ac.config(pager_action)) {
+		     $ac.config(pager_action)
+		 }
+	     }
+	 }
+     }
+}
+			
+
+:new config autoaway set away automatically?
+:conf autoaway value 1
+:conf autoaway flags bit
+
+:new config public_away show away message in channels?
+:conf public_away value 0
+:conf public_away flags bit
+
+:new config away_idle time (in minutes) to wait before setting away for idling
+:conf away_idle change_cmd a.away.idle_chng_cmd
+:conf away_idle value 5
+:conf away_idle flags it
+
+:new config no_away_chans hannels (space separated) where no away message is sent
+:conf no_away_chans value
+:conf no_away_chansflags si
+
+:new config away_chans channels (space separated) where your away message is sent (if this is set, only these channels will be used)
+:conf away_chans value
+:conf away_chans flags s
+
+:new config away_log log messages received when you are away?
+:conf away_log value 1
+:conf away_log flags bit
+
+:new config away_log_sent log sent messages when you are away?
+:conf away_log_sent value 0
+:conf away_log_sent flags b
+
+:new config pager turn on pager when you are away?
+:conf pager value 0
+:conf pager flags bit
+:conf pager change_cmd a.away.pager_chng_cmd
+
+:new config pager_action additional command to execute when pager is triggered
+:conf pager_action value
+:conf pager_action flags s
+
+:new config auto_read_away_log automatically read away log when set /back?
+:conf auto_read_away_log value 1
+:conf auto_read_away_log flags bt
+
+:new config auto_delete_away_log automatically delete away log when creating a new one?
+:conf auto_delete_away_log value	1
+:conf auto_delete_away_log flags	bt
+
+alias a.away.set {
+    if (!ac.config(away_log)) {
+	return
+    }
+    @a.away.log = a.log.open($apath/tmp/away.$pid() norotate nostrip noautoclose noautoclear nonetwork)
+    ^eval on #-msg $ac.hash(away) "*" {
+	@a.log($a.away.log $fparse(msg $0 $sar(/@/ /$userhost()) $1-))
+	@a.away.msgs++
+	//^set status_user3 $a.away.msgs
+    }
+    ^eval on #-notice $ac.hash(away) "*" {
+	if (index(. $0) == -1) {
+	    @a.log($a.away.log $fparse(notice $0 $sar(/@/ /$userhost()) $1-))
+	    @a.away.msgs++
+	    //^set status_user3 $a.away.msgs
+	}
+    }
+    ^eval on #-action $ac.hash(away) '% $servernick() *' {
+	if (!ischannel($1)) {
+	    @a.log($a.away.log $fparse(maction $0 $sar(/@/ /$userhost()) $1-))
+	    @a.away.msgs++
+	    //^set status_user3 $a.away.msgs
+	}
+    }
+
+    if (ac.config(away_log_sent)) {
+	^eval on #-send_msg $ac.hash(away) "*" {
+	    @a.log($a.away.log $fparse(send_msg $*))
+	}
+	^eval on #-notice $ac.hash(away) "*" {
+	    if (!ischannel($0)) {
+		@a.log($a.away.log $fparse(send_notice $*))
+	    }
+	}
+	^eval on #-send_action $ac.hash(away) "*" {
+	    if (!ischannel($1)) {
+		@a.log($a.away.log $fparse(send_maction $0 $servernick() $1-))
+	    }
+	}
+    }
+    @a.away.msgs = 0
+    //^set status_user3 $a.away.msgs
+
+    @a.away.since = time()
+}
+
+alias a.away.unset {
+    if (!ac.config(away_log)) {
+	return
+    }
+    @a.log.close($a.away.log)
+    ^eval on #-msg $ac.hash(away) -"*"
+    ^eval on #-notice $ac.hash(away) -"*"
+    ^eval on #-action $ac.hash(away) -'% $servernick() *'
+    if (ac.config(away_log_sent)) {
+	^eval on #-send_msg $ac.hash(away) -"*"
+	^eval on #-notice $ac.hash(away) -"*"
+	^eval on #-send_action $ac.hash(away) -"*"
+    }
+    ^assign -a.away.since
+    //^set -status_user3
+
+    ^assign -a.away.msgs
+    ^assign -a.away.log
+}																	
+
+if (builtin_expando(A)) {
+    a.away.set
+}
+
+^eval ^on #-exit $ac.hash(away) "*" {
+    if (builtin_expando(A)) {
+	@a.log.close($a.away.log)
+    }
+    @unlink($apath/tmp/away.$pid())
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

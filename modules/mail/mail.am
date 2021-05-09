@@ -1,0 +1,166 @@
+### $Id: mail.am,v 1.6 2002/05/06 14:11:02 wd Exp $
+
+:new module mail
+:mod mail version 9
+:mod mail desc mailbox monitoring system
+:mod mail author wd@anduril.org White_Dragon Chip Norkus
+:mod mail save_cmd a.mail.save
+
+:new format mail_notify new mail notification format
+:form mail_notify arguments @time@ @folder@
+:form mail_notify xref comm:mbox
+:form mail_notify help \
+this format is used when the mail module notifies the user of new mail in a \
+folder.
+
+:new config mbox_watch_time time interval to scan mailboxes
+:conf mbox_watch_time flags n
+:conf mbox_watch_time value 60
+:conf mbox_watch_time change_cmd a.mail.chng.mbox_watch_time
+:conf mbox_watch_time xref comm:mbox
+:conf mbox_watch_time help \
+this config sets the time, in seconds, to run mail checks.  if it is set to \
+0, mail checks will not be performed at all.
+
+:new config mbox_count count the number of messages in mailboxes
+:conf mbox_count flags
+alias a.mail.chng.mbox_watch_time (name, old) {
+    if (old > 0) {
+	^timer -del mailcheck
+    }
+
+    if (ac.config($name) > 0) {
+	^timer -refnum mailcheck -rep -1 $ac.config($name) a.mail.check
+    }
+}
+
+:new command mbox [add|del|list] [mailbox]
+:comm mbox desc maintains the mailbox monitoring list
+:comm mbox xref form:mail_notify conf:mbox_watch_time
+:comm mbox help \
+this command is the interface to the mailbox monitoring system.  currently \
+only 'mbox' (old) style mailboxes are supported.  If you'd like to keep an \
+eye out for new mail in (say) ~/mail/freebsd-current, you can do: %n\
+/mbox add ~/mail/freebsd-current%n\
+and the module will check it at regular intervals to see if that folder \
+contains new mail.  'del' acts the same way, but instead removes the folder, \
+and 'list' presents a list of the folders currently being monitoring.  if \
+no arguments are given, a 'list' is done by default.
+
+alias mbox (cmd, args) {
+    if (cmd != [] && cmd != [list] && numwords($args) != 1) {
+	@usage(mbox)
+	return
+    } else if (cmd == []) {
+	@:cmd = [list]
+    }
+
+    @:folder = twiddle($args)
+
+    switch ($cmd) {
+	(add) {
+	    if (findw($folder $a.mail.folders) != -1) {
+		aerrecho folder $args is already being monitored
+		return
+	    }
+
+	    @:stat = stat($folder)
+	    if (stat == []) {
+		aerrecho stat\($folder\) failed.  either the file is not accesible or the system does not support stat(2).
+		return
+	    }
+	    @push(a.mail.folders $folder)
+	    @push(a.mail.times $word(11 $stat))
+	    
+	    aecho now monitoring $folder for new mail
+	}
+	(del) {
+	    if (findw($folder $a.mail.folders) == -1) {
+		aerrecho folder $folder is not being monitored
+		return
+	    }
+
+	    @a.mail.folders = remw($folder $a.mail.folders)
+	    aecho no longer monitoring $folder for new mail
+	}
+	(list) {
+	    @:mtot = 0
+	    a.list.start u 4 monitored folders
+	    a.list.hdr folder
+	    a.list.hdr last modified
+	    a.list.hdr size
+	    a.list.hdr messages
+	    for xx in ($a.mail.folders) {
+		@:stat = stat($xx)
+		a.list.add $xx
+		if (stat != []) {
+		    a.list.add $strftime($word(11 $stat) %d/%m/%Y %H:%M:%S)
+		    a.list.add $ac.size_fmt($word(7 $stat))
+		} else {
+		    a.list.add (unknown)
+		    a.list.add (unknown)
+		}
+		@:mcnt = 0
+		@:fd = open($xx R)
+		if (fd > -1) {
+		    while (!eof($fd)) {
+			if (word(1 $read($fd)) == [From]) {
+			    @:mcnt++
+			}
+		    }
+		}
+		@close($fd)
+		a.list.add $mcnt
+		@:mtot += mcnt
+	    }
+	    a.list.end $#a.mail.folders folders \($mtot msgs\)
+	}
+	(*) {
+	    @usage(mbox)
+	}
+    }
+}
+
+alias a.mail.check {
+    if (numwords($a.mail.folders) == 0) {
+	return
+    }
+
+    for (@:i = 0,i < numwords($a.mail.folders),@:i++) {
+	@:folder = word($i $a.mail.folders)
+	@:stat = stat($folder)
+	if (stat == []) {
+	    continue
+	}
+	if (word(11 $stat) > word($i $a.mail.times)) {
+	    aecho $fparse(mail_notify $word(11 $stat) $folder)
+	    @a.mail.times = chngw($i $word(11 $stat) $a.mail.times)
+	}
+    }
+}
+
+alias a.mail.save {
+    @:fd = a.save.open($apath/etc/mail mail settings)
+    if (fd == -1) {
+	return
+    }
+    @write($fd ^assign a.mail.folders $a.mail.folders)
+    @close($fd)
+}
+
+if (fexist($apath/etc/mail) != -1) {
+    eval load $apath/etc/mail
+} else {
+    @a.mail.folders = getenv(MAIL)
+}
+
+for xx in ($a.mail.folders) {
+    @:stat = stat($xx)
+    if (stat == []) {
+	@a.mail.folders = remw($xx $a.mail.folders)
+    } else {
+	@push(a.mail.times $word(11 $stat))
+    }
+}
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

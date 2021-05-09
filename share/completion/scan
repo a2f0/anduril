@@ -1,0 +1,4 @@
+@a.completion.add(names -all)
+@a.completion.add(names %c)
+@a.completion.alias(names sc scan)
+

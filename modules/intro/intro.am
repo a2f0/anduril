@@ -1,0 +1,74 @@
+### $Id: intro.am,v 1.12 2003/08/26 01:09:15 wd Exp $
+
+:new module intro
+:mod intro version 12
+:mod intro desc does some final display on startup stuff
+:mod intro author wd@anduril.org White_Dragon Chip Norkus
+:mod intro dep box
+
+^on ^hook "anduril_loaded *" {
+	### pick some random ansi to display
+	@:files = glob($apath/share/ansi/ansi*)
+	if (files) {
+		@:fp = open($word($rand($#files) $files) R)
+		if (fp >= 0) {
+			### read in all the lines, storing them, and saving the
+			### longest length in printable characters (whoopee)
+			### after all that, output the ansi, centered on the screen
+			@:i = 0
+			@:llen = 0
+			while (!eof($fp)) {
+				@:s[$i] = read($fp)
+				if (strlen($stripcrap(ALL $s[$i]))>llen) {
+					@llen=strlen($stripcrap(ALL $s[$i]))
+				}
+				@i++
+			}
+			@close($fp)
+			@:pad = word(0 $geom())
+			@pad -= llen
+			@pad = floor(${pad / 2})
+			@pad = repeat($pad  )
+			@:x = 0
+			while (x < i) {
+				echo ${pad}$s[$x]
+				@x++
+			}
+		}
+	}
+	aecho anduril\($3\) loadtime: $1
+	aecho        modules loadtime: $2
+
+	if (fexist($apath/etc/save) == -1) {
+		^on ^376 "*" {
+aecho !*****! PLEASE READ THIS !*****!
+aecho Welcome to anduril!  This seems to be your first time loading
+aecho the script.  For help with commands you may use either the
+aecho /ahelp or /man commands.  To change script settings you should
+aecho use the /aconfig command, and to try different skins (themes)
+aecho use the /skins command.  To examine and change individual
+aecho formats, you can use the /formats and /format commands.
+aecho
+aecho additionally, the following modules were NOT loaded:
+			fe ($a.modules.list_all) xx {
+				if (!ac.module.find($xx)) {
+					@push(:notloaded $xx)
+				}
+			}
+aecho $notloaded
+aecho usually the features they provide are intuitive and indicated by the
+aecho module's name.  to load one of these modules, simply use the command
+aecho /insmod <modulename>.  there are a few modules which the script will
+aecho autoload when needed (such as the dalnet module).  to see a list of all
+aecho currently loaded modules you may use the /lsmod command.
+aecho
+aecho feedback/requests welcome! see the README file for contact info.
+aecho also, remember to save your settings when you're done with /asave !
+aecho !*****! OKAY, THAT'S ALL. !*****!
+			^on 376 -*
+		}
+	}
+}       
+
+# vim: syntax=off ts=3 ai smartindent
+

@@ -1,0 +1,6 @@
+# formats for type xdcc_plist and slaves xdcc_plist_body xdcc_plist_body_note
+ac.format.add           xdcc_plist [xdcc] @packs@ packs offered \(@size@ total); /ctcp $N XDCC SEND # to get package%N
+ac.format.add      xdcc_plist_body [#$pad(3 " " @pack@)] @desc@ \(@size@/@gets@ gets)%N
+ac.format.add xdcc_plist_body_note `-> @note@%N
+# ---
+

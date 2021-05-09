@@ -1,0 +1,218 @@
+# formats for type wall
+ac.format.add                 wall [A/wall]: @msg@
+ac.format.add                 wall [wall\(@chan@\)] @msg@
+ac.format.add                 wall \(ops@@chan@\): @msg@
+ac.format.add                 wall @msg@ \(wall/@chan@\)
+# ---
+
+# formats for type public and slaves public_other
+ac.format.add               public <@nick@> @msg@
+ac.format.add         public_other <@nick@):@channel@> @msg@
+
+ac.format.add               public <@nick@> @msg@
+ac.format.add         public_other <@nick@:@channel@> @msg@
+
+ac.format.add               public \(@nick@) @msg@
+ac.format.add         public_other \(@nick@:@channel@) @msg@
+
+ac.format.add               public [@nick@] @msg@
+ac.format.add         public_other [@nick@:@channel@] @msg@
+
+ac.format.add               public @nick@: @msg@
+ac.format.add         public_other @nick@/@channel@: @msg@
+
+ac.format.add               public $(dcol1)<$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1)>%n @msg@
+ac.format.add         public_other $(dcol1)<$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1)>%n @msg@
+
+ac.format.add               public $(dcol1)\($(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1))%n @msg@
+ac.format.add         public_other $(dcol1)\($(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1))%n @msg@
+
+ac.format.add               public $(dcol1)[$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1)]%n @msg@
+ac.format.add         public_other $(dcol1)[$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1)]%n @msg@
+
+ac.format.add               public $(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1):%n @msg@
+ac.format.add         public_other $(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1)/$(col2)@channel@$(dcol1):%n @msg@
+
+ac.format.add               public $(col1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1)>%n @msg@
+ac.format.add         public_other $(col1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1)>%n @msg@
+
+ac.format.add               public $(col1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1))%n @msg@
+ac.format.add         public_other $(col1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1))%n @msg@
+
+ac.format.add               public $(col1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1)]%n @msg@
+ac.format.add         public_other $(col1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1)]%n @msg@
+
+ac.format.add               public $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1):%n @msg@
+ac.format.add         public_other $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1)/$(col2)@channel@$(col1):%n @msg@
+
+ac.format.add               public $(hcol1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1)>%n @msg@
+ac.format.add         public_other $(hcol1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1)>%n @msg@
+
+ac.format.add               public $(hcol1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1))%n @msg@
+ac.format.add         public_other $(hcol1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1))%n @msg@
+
+ac.format.add               public $(hcol1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1)]%n @msg@
+ac.format.add         public_other $(hcol1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1)]%n @msg@
+
+ac.format.add               public $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1):%n @msg@
+ac.format.add         public_other $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1)/$(col2)@channel@$(hcol1):%n @msg@
+# ---
+
+# formats for type send_public and slaves send_public_other
+ac.format.add          send_public <@nick@> @msg@
+ac.format.add    send_public_other <@nick@):@channel@> @msg@
+
+ac.format.add          send_public <@nick@> @msg@
+ac.format.add    send_public_other <@nick@:@channel@> @msg@
+
+ac.format.add          send_public \(@nick@) @msg@
+ac.format.add    send_public_other \(@nick@:@channel@) @msg@
+
+ac.format.add          send_public [@nick@] @msg@
+ac.format.add    send_public_other [@nick@:@channel@] @msg@
+
+ac.format.add          send_public @nick@: @msg@
+ac.format.add    send_public_other @nick@/@channel@: @msg@
+
+ac.format.add          send_public $(dcol1)<$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1)>%n @msg@
+ac.format.add    send_public_other $(dcol1)<$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1)>%n @msg@
+
+ac.format.add          send_public $(dcol1)\($(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1))%n @msg@
+ac.format.add    send_public_other $(dcol1)\($(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1))%n @msg@
+
+ac.format.add          send_public $(dcol1)[$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1)]%n @msg@
+ac.format.add    send_public_other $(dcol1)[$(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1):$(col2)@channel@$(dcol1)]%n @msg@
+
+ac.format.add          send_public $(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(dcol1):%n @msg@
+ac.format.add    send_public_other $(ncol)$msar(/@/$(col1)@%n/+/$(col1)+%n/@nick@)$(col1)/$(col2)@channel@$(dcol1):%n @msg@
+
+ac.format.add          send_public $(col1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1)>%n @msg@
+ac.format.add    send_public_other $(col1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1)>%n @msg@
+
+ac.format.add          send_public $(col1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1))%n @msg@
+ac.format.add    send_public_other $(col1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1))%n @msg@
+
+ac.format.add          send_public $(col1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1)]%n @msg@
+ac.format.add    send_public_other $(col1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(col1)]%n @msg@
+
+ac.format.add          send_public $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(col1):%n @msg@
+ac.format.add    send_public_other $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1)/$(col2)@channel@$(col1):%n @msg@
+
+ac.format.add          send_public $(hcol1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1)>%n @msg@
+ac.format.add    send_public_other $(hcol1)<$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1)>%n @msg@
+
+ac.format.add          send_public $(hcol1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1))%n @msg@
+ac.format.add    send_public_other $(hcol1)\($(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1))%n @msg@
+
+ac.format.add          send_public $(hcol1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1)]%n @msg@
+ac.format.add    send_public_other $(hcol1)[$(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1):$(col2)@channel@$(hcol1)]%n @msg@
+
+ac.format.add          send_public $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(hcol1):%n @msg@
+ac.format.add    send_public_other $(ncol)$msar(/@/$(dcol1)@%n/+/$(dcol1)+%n/@nick@)$(dcol1)/$(col2)@channel@$(hcol1):%n @msg@
+
+ac.format.add          send_public <@nick@> @msg@   
+ac.format.add    send_public_other -> @channel@ <@nick@> @msg@
+# ---
+
+# formats for type action and slaves action_other
+ac.format.add               action * @nick@ @msg@
+ac.format.add         action_other * @nick@ @msg@
+
+ac.format.add               action $(dcol1)*%n @nick@ @msg@
+ac.format.add         action_other $(dcol1)*%n @nick@$(col1):$(col2)@channel@$(ncol) @msg@
+
+ac.format.add               action $(col1)*%n @nick@ @msg@
+ac.format.add         action_other $(col1)*%n @nick@$(dcol1):$(col2)@channel@$(ncol) @msg@
+
+ac.format.add               action $(hcol1)*%n @nick@ @msg@
+ac.format.add         action_other $(hcol1)*%n @nick@$(dcol1):$(col2)@channel@$(ncol) @msg@
+# ---
+
+# formats for type send_action and slaves send_action_other
+ac.format.add          send_action * @nick@ @msg@
+ac.format.add    send_action_other * @nick@ @msg@
+
+ac.format.add          send_action $(dcol1)*%n @nick@ @msg@
+ac.format.add    send_action_other $(dcol1)*%n @nick@$(col1):$(col2)@channel@$(ncol) @msg@
+
+ac.format.add          send_action $(col1)*%n @nick@ @msg@
+ac.format.add    send_action_other $(col1)*%n @nick@$(dcol1):$(col2)@channel@$(ncol) @msg@
+
+ac.format.add          send_action $(hcol1)*%n @nick@ @msg@
+ac.format.add    send_action_other $(hcol1)*%n @nick@$(dcol1):$(col2)@channel@$(ncol) @msg@
+
+ac.format.add          send_action * @nick@ @msg@
+ac.format.add    send_action_other * -> @channel@: @nick@ @msg@
+# ---
+
+# formats for type public_msg
+ac.format.add           public_msg $(hcol1)*%n@nick@$(dcol1):$(col2)@channel@$(hcol1)*%n @msg@
+# ---
+
+# formats for type public_notice
+ac.format.add        public_notice $(dcol1)-%n@nick@$(dcol1):$(col2)@channel@$(dcol1)-%n @msg@
+# ---
+
+# formats for type join
+ac.format.add                 join @nick@ \(@user@@@host@) has joined @channel@
+ac.format.add                 join $(col1)join$(dcol1)\($(hcol1)@channel@$(dcol1))%n; $(hcol1)@nick@$(dcol1)\($(col1)@user@$(dcol1)@$(col1)@host@$(dcol1))${[@extra@] ? [ \($(ncol)@extra@$(dcol1)\)] : []}
+ac.format.add                 join $(hcol1)j$(col1)oin $(hcol2)@nick@$(dcol2)[$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)] $(ncol)@channel@ ${[@extra@] ? [ $(dcol2)[$(ncol)@extra@$(dcol2)]] : []}
+ac.format.add                 join $(dcol1)\($(col1)j$(ncol)oin$(dcol1).$(hcol1)@channel@$(dcol1)) $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@${[@extra@] ? [ $(dcol1)\($(ncol)@extra@$(dcol1)\)] : []}
+# ---
+
+# formats for type part
+ac.format.add                 part @nick@ has left @channel@ ${[@msg@] ? [because \(@msg@%n)] : []}
+ac.format.add                 part $(col1)part$(dcol1)\($(hcol1)@channel@$(dcol1))%n; $(hcol1)@nick@$(dcol1)\($(col1)@user@$(dcol1)@$(col1)@host@$(dcol1)) ${[@msg@] ? [$(dcol1)\(%n@msg@$(dcol1))] : []}
+ac.format.add                 part $(hcol1)p$(col1)art $(hcol2)@nick@$(dcol2)[$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)] $(ncol)@channel@ ${[@msg@] ? [$(dcol2)\($(ncol)@msg@$(dcol2))] : []}
+ac.format.add                 part $(dcol1)\($(col1)p$(ncol)art$(dcol1).$(hcol1)@channel@$(dcol1)) $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@ ${[@msg@] ? [$(dcol1)\($(ncol)@msg@$(dcol1))] : []}
+# ---
+
+# formats for type kick
+ac.format.add                 kick @kicked@ has been kicked off channel @channel@ by @by@ \(@msg@%n)
+ac.format.add                 kick $(col1)kick$(dcol1)\($(hcol1)@channel@$(dcol1)/$(hcol1)@by@$(dcol1))%n; $(hcol1)@kicked@$(dcol1) \(%n@msg@%n$(dcol1))
+ac.format.add                 kick $(hcol1)k$(col1)ick $(hcol2)@kicked@ $(ncol)from @channel@ by $(col2)@by@ $(dcol2)\($(ncol)@msg@$(dcol2))
+ac.format.add                 kick $(dcol1)\($(col1)k$(ncol)ick$(dcol1).$(hcol1)@channel@$(dcol1)) $(hcol2)@kicked@$(ncol) by $(col2)@by@ $(dcol2)\($(ncol)@msg@$(dcol2))
+# ---
+
+# formats for type cmode and slaves smode
+ac.format.add                cmode mode change "@args@" on channel @channel@ by @nick@
+ac.format.add                smode mode change "@args@" on channel @channel@ by @server@
+
+ac.format.add                cmode $(col1)mode$(dcol1)\($(hcol1)@channel@$(dcol1))%n; $(hcol1)@nick@$(col1): @args@
+ac.format.add                smode $(hcol1)serv$(col1)mode$(dcol1)\($(hcol1)@channel@$(dcol1))%n; $(hcol1)@server@$(col1): @args@
+
+ac.format.add                cmode $(hcol1)m$(col1)ode $(dcol2)[$(col2)@args@$(dcol2)]$(ncol) on @channel@ by $(hcol2)@nick@
+ac.format.add                smode $(hcol1)servm$(col1)ode $(dcol2)[$(col2)@args@$(dcol2)]$(ncol) on @channel@ by $(hcol2)@server@
+
+ac.format.add                cmode $(dcol1)\($(col1)m$(ncol)ode$(dcol1).$(hcol1)@channel@$(dcol1)) $(col2)@args@$(ncol) by $(hcol2)@nick@
+ac.format.add                smode $(dcol1)\($(col1)serv$(ncol)mode$(dcol1).$(hcol1)@channel@$(col1))$(dcol1)) $(col2)@args@$(ncol) by $(hcol2)@server@
+# ---
+
+# formats for type quit
+ac.format.add                 quit Signoff: @nick@ \(@msg@%n)
+ac.format.add                 quit $(col1)quit$(dcol1)\($(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1))%n; $(hcol1)@nick@$(dcol1) \(%n@msg@%n$(dcol1))
+ac.format.add                 quit $(col1)quit$(dcol1)\($(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1))%n; $(hcol1)@nick@$(dcol1)[$(col1)@user@$(dcol1)@$(col1)@host@$(dcol1)] \(%n@msg@%n$(dcol1))
+ac.format.add                 quit $(hcol1)q$(col1)uit $(hcol2)@nick@$(ncol) on $sar(g/,/$(dcol2),,$(ncol)/@chans@) $(dcol2)\($(ncol)@msg@$(dcol2))
+ac.format.add                 quit $(hcol1)q$(col1)uit $(hcol2)@nick@$(dcol2)\($(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)\)$(ncol) on $sar(g/,/$(dcol2),,$(ncol)/@chans@) $(dcol2)\($(ncol)@msg@$(dcol2))
+ac.format.add                 quit $(dcol1)\($(col1)q$(ncol)uit$(dcol1).$(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1)) $(hcol2)@nick@ $(dcol1)\($(ncol)@msg@$(dcol1))
+ac.format.add                 quit $(dcol1)\($(col1)q$(ncol)uit$(dcol1).$(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1)) $(hcol2)@nick@$(dcol1)[$(col1)@user@$(dcol1)@$(col1)@host@$(dcol1)] $(dcol1)\($(ncol)@msg@$(dcol1))
+# ---
+
+# formats for type nick
+ac.format.add                 nick @from@ is now known as @to@
+ac.format.add                 nick $(col1)nick$(dcol1)\($(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1))%n; $(col1)@from@ $(dcol1)-> $(hcol1)@to@
+ac.format.add                 nick $(hcol1)n$(col1)ick $(col2)@from@$(ncol) on $sar(g/,/$(dcol2),,$(ncol)/@chans@) is now $(hcol2)@to@
+ac.format.add                 nick $(dcol1)\($(col1)n$(ncol)ick$(dcol1).$(hcol1)$sar(g/,/$(dcol1),,$(hcol1)/@chans@)$(dcol1)) $(col2)@from@$(ncol) to $(hcol2)@to@
+# ---
+
+# formats for type topic and slaves current_topic
+ac.format.add                topic @by@ has changed the topic on channel @channel@ to @topic@
+ac.format.add        current_topic Topic for @channel@: @topic@
+ac.format.add                topic $(col1)topic$(dcol1)\($(hcol1)@channel@$(dcol1))%n; $(hcol1)@by@$(col1):%n @topic@
+ac.format.add        current_topic $(col1)topic$(dcol1)\($(hcol1)@channel@$(dcol1))%n: @topic@
+ac.format.add                topic $(hcol1)t$(col1)opic$(ncol) set by $(hcol2)@by@$(ncol) for @channel@ to$(dcol2):$(ncol) @topic@
+ac.format.add        current_topic $(hcol1)t$(col1)opic$(ncol) for @channel@ is$(dcol2):$(ncol) @topic@
+ac.format.add                topic $(dcol1)\($(col1)t$(ncol)opic$(dcol1).$(hcol1)@channel@$(dcol1)) $(col2)@by@$(dcol2):$(ncol) @topic@
+ac.format.add        current_topic $(dcol1)\($(col1)t$(ncol)opic$(dcol1).$(hcol1)@channel@$(dcol1))$(dcol2):$(ncol) @topic@
+# ---
+

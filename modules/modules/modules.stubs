@@ -1,0 +1,94 @@
+### $Id: modules.stubs,v 1.9 2001/11/14 06:28:19 wd Exp $
+ac.package modules
+
+alias insmod (modules) {
+    if (modules == []) {
+	@usage(insmod)
+	return
+    }
+    fe ($modules) xx {
+	@:file = xx
+	if (right(3 $xx) == [.am]) {
+	    @:file = left(${strlen($file) - 3} $file)
+	}
+	@ac.module.load($file user loaded)
+    }
+}
+
+alias rmmod (modules) {
+    if (modules == []) {
+	@usage(rmmod)
+	return
+    }
+    fe ($modules) xx {
+	@:file = xx
+	### remove the .am tag if there
+	if (right(3 $xx) == [.am]) {
+	    @:file = left(${strlen($file) - 3} $file)
+	}
+	@ac.module.unload($file r)
+    }
+}
+
+alias rlmod (modules) {
+    if (modules == []) {
+	@usage(rlmod)
+	return
+    }
+
+    fe ($modules) xx {
+	if (ac.module.find($xx)) {
+	    @:loader = modules[$xx][loader]
+	    @ac.module.unload($xx f)
+	    @ac.module.load($xx $loader)
+	} else {
+	    aerrecho no such module $xx
+	}
+    }
+}
+
+alias lsmod (flags) {
+    a.modules.make_list
+    if (flags == [-v]) {
+	a.list.start u 3 module listing
+	a.list.hdr module
+	a.list.hdr stat
+	a.list.hdr description
+	fe ($a.modules.list) xx {
+	    a.list.add $xx
+	    if (ac.module.find($xx)) {
+		a.list.add +
+		a.list.add $modules[$xx][desc]
+	    } else {
+		a.list.add -
+		# ugh.  find the description in the file.
+		@:fd = open($apath/modules/$xx/$xx\.am R)
+		while (!eof($fd)) {
+		    @:mline = read($fd)
+		    if (match(:mod* $mline) && match(desc* $word(2 $mline))) {
+			@:desc = restw(3 $mline)
+		    }
+		}
+		@close($fd)
+		if (desc != []) {
+		    a.list.add $desc
+		} else {
+		    a.list.add (no description)
+		}
+	    }
+	}
+    } else {
+	a.list.start u 0 module listing
+	@:y = maxlen($a.modules.list)
+	fe ($a.modules.list) xx {
+	    if (ac.module.find($xx)) {
+		a.list.add $cparse(%n$ac.len(-$y $xx)%K/%W+)
+	    } else {
+		a.list.add $cparse(%n$ac.len(-$y $xx)%K/%W-)
+	    }	
+	}
+    }
+    a.list.end + loaded\; - not loaded
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,195 @@
+### $Id: whois.am,v 1.22 2002/11/10 11:27:53 wd Exp $
+
+:new module whois
+:mod whois version 36
+:mod whois desc various whois formatting bits
+:mod whois author wd@anduril.org White_Dragon Chip Norkus
+:mod whois depend box usage util
+
+:new command whois <nick> [nick|server]
+:comm whois aliases wi
+:comm whois desc performs a whois query on the specified nick(s)
+:comm whois flags i
+:comm whois xref comm:wii comm:whowas form:whois
+:comm whois help \
+this command simply performs a whois on the specified nick, see also the \
+/wii command.
+
+alias whois (nick) {
+    if (nick == []) {
+	@:nick = builtin_expando(N)
+    }
+    //whois $nick
+}
+
+:new command wii <nick>
+:comm wii aliases
+:comm wii desc performs a remote whois query on the specified nick
+:comm wii xref comm:whois comm:whowas form:whois
+:comm wii help \
+this command behaves like /whois, except that it specifically performs a \
+whois query on the specified person's server, to get extended data
+
+alias wii (nick) {
+    if (nick == []) {
+	@:nick = builtin_expando(N)
+    }
+    //whois $nick $nick
+}
+
+:new command whowas <nick>
+:comm whowas aliases ww
+:comm whowas desc performs a whowas query on the specified nick
+:comm whowas xref comm:whois form:whowas
+:comm whowas help \
+this command is exactly like whois, but is is in the past tense
+
+alias whowas (nick) {
+    if (nick == []) {
+	@usage(whowas)
+	return
+    }
+    //whowas $nick
+}
+
+### now all the lovely formats for whois and whowas
+:new format whois format for /whois command
+:form whois flags i
+:form whois slaves whois_arg whois_server
+:form whois arguments @nick@ @user@ @host@ @country@
+:form whois display_command a.whois.whois_display
+:form whois xref form:whowas comm:whois
+
+:new format whois_arg
+:form whois_arg flags %
+:form whois_arg arguments @type@ @args@
+
+:new format whois_server
+:form whois_server flags %
+:form whois_server arguments @server@ @args@
+
+### whowas
+:new format whowas format for /whowas command
+:form whowas slaves whowas_arg whowas_server
+:form whowas arguments @nick@ @user@ @host@ @country@
+:form whowas display_command a.whois.whowas_display
+:form whowas xref form:whois comm:whowas
+
+:new format whowas_arg
+:form whowas_arg flags %
+:form whowas_arg arguments @type@ @args@
+
+:new format whowas_server
+:form whowas_server flags %
+:form whowas_server arguments @server@ @args@
+
+### and numeric on tags.
+
+### this variable increases every time we start a
+### whois
+@a.whois.whois=0
+@a.whois.whowas=0
+alias a.whois.echo (name, type, args){
+    if (a.whois.whois) {
+	a.box.echo $fparse(whois_arg $name $args)
+    } elsif (a.whois.whowas) {
+	a.box.echo $fparse(whowas_arg $name $args)
+    }
+}
+
+### RPL_WHOISUSER:
+### add hooks for all the other RPL_WHOIS goodies which will be removed at
+### RPL_ENDOFWHOIS.
+^on ^311 "*" {
+    ### we're doing a /wi now.
+    @a.whois.whois++
+
+    ### stack up the hooks we're going to add
+    fe (301 307 308 309 310 312 313 317 319 330 338) xx {
+	stack push on $xx
+    }
+
+    ### RPL_AWAY
+    ^on ^301 "*" {a.whois.echo away $0-}
+    ### RPL_WHOISREGNICK (DALnet)
+    ^on ^307 "*" {a.whois.echo registered $1-}
+    ### RPL_WHOISADMIN (DALnet)
+    ^on ^308 "*" {a.whois.echo admin $1-}
+    ### RPL_WHOISSADMIN (DALnet)
+    ^on ^309 "*" {a.whois.echo sadmin $1-}
+    ### RPL_WHOISSVCMSG (wtf is this? DALnet)
+    ^on ^310 "*" {a.whois.echo ? $1-}
+    ### RPL_WHOISSERVER
+    ^on ^312 "*" {a.box.echo $fparse(whois_server $2-)}
+    ### RPL_WHOISOPERATOR
+    ^on ^313 "*" {a.whois.echo operator $1-}
+    ### RPL_WHOISIDLE
+    ^on ^317 "*" {
+	a.whois.echo idle $1 $tdiff3($2)
+	a.whois.echo signon $1 $strftime($3 %c)
+    }
+    ### RPL_WHOISCHANNELS
+    ^on ^319 "*" {a.whois.echo channels $1-}
+    ### RPL_WHOISUSERNAME
+    ^on ^330 "*" {a.whois.echo username $1-}
+    ### RPL_WHOISACTUALLY (DALnet)
+    ^on ^338 "*" {a.whois.echo realhost $3-}
+
+    a.box.start
+    a.box.echo $fparse(whois $1 $2 $3 $a.country($3))
+    a.box.echo $fparse(whois_arg realname $5-)
+}
+### RPL_ENDOFWHOIS
+^on ^318 "*" {
+    if (a.whois.whois) {
+	a.box.end
+	@a.whois.whois--
+    }
+
+    ### de-stack our numerics
+    fe (301 307 308 309 310 312 313 317 319 330 338) xx {
+	stack pop on $xx
+    }
+}
+
+### RPL_WHOWASUSER
+^on ^314 "*" {
+    @a.whois.whowas++
+
+    ### RPL_WHOISSERVER
+    stack push on 312
+    ^on ^312 "*" {a.box.echo $fparse(whowas_server $2-)}
+
+    a.box.start
+    a.box.echo $fparse(whowas $1 $2 $3 $a.country($3))
+    a.box.echo $fparse(whowas_arg realname $5-)
+}
+### RPL_ENDOFWHOWAS
+^on ^369 "*" {
+    if (a.whois.whowas) {
+	a.box.end
+	@a.whois.whowas--
+    }
+
+    stack pop on 312
+}
+
+alias a.whois.whois_display (format, number) {
+    a.box.start
+    a.box.echo $fparse(whois wd wd anduril.org Non profit organization)
+    a.box.echo $fparse(whois_arg realname Soon the water will come...)
+    a.box.echo $fparse(whois_arg channels @#wd @#epic @#tolkien @#anduril)
+    a.box.echo $fparse(whois_server opus.bc.ca.dal.net These are the cries of the carrots...)
+    a.box.echo $fparse(whois_arg idle 6h 6m 6s)
+    a.box.end
+}
+
+alias a.whois.whowas_display (format, number) {
+    a.box.start
+    a.box.echo $fparse(whowas wd wd anduril.org Non profit organization)
+    a.box.echo $fparse(whowas_arg realname Soon the water will come...)
+    a.box.echo $fparse(whowas_server opus.bc.ca.dal.net Wed Feb 21 04:20:00 2001)
+    a.box.end
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

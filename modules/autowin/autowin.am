@@ -1,0 +1,36 @@
+:new module autowin
+:mod autowin version 1
+:mod autowin desc automagically create new query windows
+:mod autowin author erik@knowoneness.com erik Erik Hanson
+
+:new config autowin autowin's toggle variable
+:conf autowin flags b
+:conf autowin value 1
+:conf autowin change_cmd autowin.tog
+:conf autowin help this setting toggles whether new query windows will be created when new messages are received.
+
+alias autowin.tog {
+    if (ac.config(autowin)) {
+	^on #-msg -$ac.hash(autowin) "*" if (querywin($0) < 0) {
+	    ^window new query $0 add $0 hide
+	    aecho query window \($querywin($0)\) created for $0
+	}
+	^on #-action -$ac.hash(autowin) "*" {
+	    if (!ischannel($1) && querywin($0) < 0) {
+		^window new query $0 add $0 hide
+		aecho query window \($querywin($0)\) created for $0
+	    }
+	}
+    } else {
+	^on #-msg -$ac.hash(autowin) -"*"
+	^on #-action -$ac.hash(autowin) -"*"
+    }
+}
+
+eval ^on #-channel_nick -$ac.hash(autowin) "*" {
+    if (querywin($1) > 0) {
+	^window $querywin($1) query $2
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

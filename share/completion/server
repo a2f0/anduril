@@ -1,0 +1,4 @@
+@a.completion.add(who %C,d,H,N*)
+@a.completion.alias(who w)
+@a.completion.add(sping %s)
+@a.completion.add(sfilter %'add,del,list' %"a.server.sfilter.types")

@@ -1,0 +1,203 @@
+------------------------------------------------------------------------------ 
+$Id: core,v 1.17 2001/08/06 04:31:17 wd Exp $
+------------------------------------------------------------------------------
+
+This is all brief and sketchy, sorry...
+
+you can rely on the following commands and variables always being available
+to modules, no matter what else is loaded (actually, this is really just a
+list of functions/commands in the anduril.irc file).  the ones
+that look like functions are used as such by the script (though you do not
+have to of course), the ones that don't aren't, and the $variables are
+$variables...  These 'are' in alphabetical order, if you pretend that
+the ac. prefix on functions isn't there. (it's not, it's your imagination)
+
+Please note, the entire ac.* branch should be considered reserved for the
+core.
+
+Hooks and ons are described at the bottom.
+
+* ac.format.add(<format_type> <format>)
+  - adds the given format to those for format_type
+
+* aecho <stuff>
+  - echo with a banner, by default $banner (/set BANNER)  unless the echo 
+    module is loaded
+
+* aerrecho <stuff>
+  - echo with an error banner, defualt '[E] ' unless echo module is loaded
+
+* $anduril
+  - equivalent to $aversion, but only set after the script itself
+    is loaded! (how neat? :)
+
+* $apath
+  - path to the script's base directory
+
+* $aversion
+  - the version of the script, as I deem it!  Bow mortals and see the mighty
+    version branding of the Gods! ...or you could just buy me a Coke...
+
+* ceil(<number>)
+  - just like the C function, returns the number rounded up. (no matter what 
+    the decimal value is (i.e. ceil(2.3)==3))
+    (this is only added if the version of EPIC being used has no ceil() 
+    function)
+
+* $col(1), $hcol(1), $dcol(1) (color variables)
+  $col2),  $hcol2,   $dcol2,
+  $ncol
+  - these are set in core as '%n', '%W', and '%K'.  they are meant to be
+    used in formats and theming.  col is equivalent to col1, hcol = hcol1,
+    etc.  See the 'color' module.  The $ncol variable is a special variable,
+    whose contents will always be %n.
+
+* $a.command_list
+  - this is a complete list of the commands added via :command stuff
+  
+* $a.config_list
+  - this is a complete list of the configs added via :config stuff
+
+* a.core.warn_set
+  - this is a small alias to warn when the user tries to change a holy
+    setting.
+
+* $dcol, $dcol1, $dcol2 (see 'color variables' above)
+
+* a.encode(<string>)
+  - this behaves exactly like $encode(), except it tolower()s the string
+    given so the result is unambiguous
+
+* a.find_command(<commandname>)
+  - looks for a command with the given name, returns 1 if found, 0 if not
+
+* a.find_command_aliases(<commandname>)
+  - looks for a command, or any aliases of a command, with the given name,
+    returns the name of the command if found, nothing if not.
+  - NB: the name returned will not necessarily be the name of the argument
+        you passed.  It returns the name of the command an alias is bound to
+        if it finds an alias and not a command
+
+* a.find_config(<configname>)
+  - looks for a config variable, returns 1 if it exists, 0 otherwise.
+
+* ac.format.find(<formatname>)
+  - just like above, looks for a format returns 1 if it exists, 0
+    otherwise
+
+* ac.module.find(<modulename>)
+  - looks for a module, returns nothing or the name of the module
+
+* a.fixedlen(<len> <string>)
+  - this returns a 'fixed length' version of the string.  This behaves
+    a lot like $[x]var.  If len is preceded by a - the string is
+    right justified if undersized.  However, it also takes into
+    account color/formatting data when hacking a string up.  It's kind
+    of an expensive function, call it only when you need it!
+
+* floor(<number>)
+  - just like the C function, returns the number rounded down (behaves
+    like ceil(), but in the opposite direction)
+    (this is only added if the version of EPIC being used has no floor()
+     function)
+    
+* $a.format_list
+  - this is a complete list of the formats added by :format stuff
+
+* fparse(<format_type> [arguments])
+  - returns a string for use when outputting a parsed format, just like the
+    stuff in BitchX really.
+
+* fset(<format_type> <format>)
+  - sets the current format for format_type to the argument passed.
+
+* a.hash(<stuff>)
+  - this returns the hash_32bit value of your 'stuff', this is great for
+    hook serial numbers in modules, if every module uses $hash(itsname),
+    serial numbers are gauranteed not to conflict
+    
+* $hcol, $hcol1, $hcol2 (see 'color variables' above)
+    
+* a.is_unique_format(<format_type> <format>)
+  - internal, called by add_format to see if a format for the specified
+    format exists which is identical to the format passed.  You should
+    not need this
+
+* a.module.load(<file> <loader>)
+  - loads the modules in file, see modules.am
+
+* $a.module_list
+  - this is a complete list of the modules added by :module stuff
+
+* ac.package <package>
+  - sets the package to the 'module package' format.  useful in stub files
+
+* mstub <alias>
+  - stubs the specified alias to the file
+    modules/<currentmod>/<currentmod>.stub, basically nice shorthand for the
+    stub command
+
+* $ncol (see 'color variables' above)
+
+* a.question(text)
+  - prompts user with the specified question and returns the results.
+    variables may be used in the prompt.  a small/simple wrapper
+
+* a.quote_for_assign(<data>)
+  - quotes the passed data such that it is suitable for use in a statement
+    of the form: @foo = [data] (quotes $, [, and ])
+
+* a.read_module_list(<listfile>)
+  - internal function, you should never need this!
+
+* a.rebuild_module_dependencies()
+  - internal, rebuilds the 'needed' (dependency) field for modules, you
+     should never call this
+
+* a.save_module_list(<file>)
+  - same as above, saves the list of currently loaded modules to a file,
+    typically so they can be reloaded later...
+
+* a.save_module_settings(<module>)
+  - saves the settings for a loaded module into the proper files in the 
+    module's directory.
+    
+* a.save_settings(<file>)
+  - same as above, saves the complete collection of current formats, as well
+    as the client's notify list, settings, and keybindings.
+
+* a.size_fix(<bytes>)
+  - returns a cleaner, human-readable figure for bytes.  (i.e. df -H)
+
+* tdiff3(<time>)
+  - returns exactly like tdiff2, but with years (365-day), months (lunar/28
+    day), and weeks calculated as well
+
+* tdiff4(<time>)
+  - returns exactly like tdiff3, but with no spaces
+  
+-----------------------------------------------------------------------------
+
+hooks:
+
+* module_loadstart
+  - hooked when a module is starting to load (no args)
+
+* module_loadprogress
+  - hooked at various points in the module loading stage to indicate
+    progress made during loading (new command, config, format, etc)
+
+* module_loaded <module name> <module version> <module author emailaddr> <module author nick> <module file>
+                <number of commands> <number of confs> <number of formats> <loadtime> <module author name>
+  - hooked when a module is done processing, and is officially loaded
+
+* module_unloaded <module name> <file>
+  - hooked when a module is unloaded (i.e. by rmmod)
+
+* anduril_loaded <loadtime> <modloadtime> <version>
+  - hooked at the VERY end of anduril.irc, when EVERYTHING is loaded.
+    this is a good way to automate processes when you are assured the
+    entire script is loaded.  The <loadtime> bit is how long the
+    script took to load, it's basically just for information purposes,
+    the <modloadtime> is how long it took to load modules, again informational.
+  

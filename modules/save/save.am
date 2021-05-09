@@ -1,0 +1,49 @@
+### $Id: save.am,v 1.18 2003/03/26 09:35:43 wd Exp $
+
+:new module save
+:mod save version 23
+:mod save desc setting saver module
+:mod save author wd@anduril.org White_Dragon Chip Norkus
+
+:new command asave [module]
+:comm asave desc saves all necessary client settings
+:comm asave aliases save
+:comm asave flags i
+:comm asave help \
+this command saves all script settings if no arguments are specified, or \
+only the settings of a specific module, if the module has saveable settings.
+
+alias asave (module) {
+    if (module == []) {
+	aecho $fparse(asave_message $apath/etc/save current formats/settings)
+	@ac.save($apath/etc/save)
+	aecho $fparse(asave_message $apath/etc/modules.list module list)
+	@ac.module.save_list($apath/etc/modules.list)
+    } else {
+	if (ac.module.find($module) == []) {
+	    aerrecho no such module $module
+	} else {
+	    aecho saving settings for module $module
+	    @ac.module.save($module)
+	}
+    }
+}
+
+
+:new format asave_message output message when a file is written with /asave
+:form asave_message arguments @file@ @contents@
+
+alias a.save.open (file, desc) {
+    @unlink($file)
+    @:fd = open($file W)
+    if (fd < 0) {
+	aerrecho could not open $file to save $desc
+	return -1
+    } else {
+	aecho $fparse(asave_message $file $desc)
+    }
+
+    return $fd
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

@@ -1,0 +1,73 @@
+### $Id: netsplit.am,v 1.5 2001/09/28 06:17:58 wd Exp $
+:new module netsplit
+:mod netsplit version 5
+:mod netsplit desc netsplit detector module
+:mod netsplit author wd@anduril.org White_Dragon Chip Norkus
+:mod netsplit dep network util
+
+^on ^raw_irc "% QUIT :%?.?% %?.?%" {
+	# it's possible that one of the servers is new, but hopefully they won't
+	# both be.  get our network, then  determine if either of the servers
+	# are from the network
+	@:list = a.network.get_list($a.network.get())
+	@:from = after(: $2)
+	@:server = stripcrap(ALL $3)
+	if (list != []) {
+		if (findw($from $list) == -1 && findw($server $list) == -1) {
+			@:skip = 1
+		}
+	}
+	if (!skip) {
+		@:hash = ac.hash($from:$server)
+		@:nick = before(! $0)
+		if (a.netsplit.last != [$from:$server]) {
+			^assign -a.netsplit.$ac.hash($a.netsplit.last)
+		}
+		@a.netsplit.last = [$from:$server]
+		@push(a.netsplit.$hash $nick $commonchans($nick))
+		^timer -ref net$hash 3 a.netsplit.finish $from $server
+	}
+	stack push on raw_irc
+	stack push on signoff
+	stack push on channel_signoff
+	^on ^signoff "$nick *" {
+		stack pop on channel_signoff
+		stack pop on signoff
+		stack pop on raw_irc
+	}
+	pretend :$*
+}
+
+^bind ^F parse_command a.netsplit.show
+
+alias a.netsplit.finish (from, server) {
+	@:hash = ac.hash($from:$server)
+	@:list = [$a.netsplit[$hash]]
+
+	aecho netsplit detected: $server from $from
+	aecho ${numwords($list) / 2} people split\; press ^F to show split users
+}
+
+alias a.netsplit.show {
+	@:from = before(: $a.netsplit.last)
+	@:server = after(: $a.netsplit.last)
+	@:hash = ac.hash($from:$server)
+	@:list = [$a.netsplit[$hash]]
+
+	a.box.start netsplit
+	fe ($mychannels()) chan {
+		@:users = []
+		fe ($list) user chans {
+			if (findw($chan $tr(/,/ /$chans)) != -1) {
+				@push(users $user)
+			}
+		}
+		if (users != []) {
+         a.box.echo $numwords($users) user${numwords($users) == 1 ?  [] : [s]} from $chan\:
+			a.box.echo $users
+		}
+	}
+	a.box.end
+}
+
+# vim: syntax=off ts=3 ai smartindent

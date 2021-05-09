@@ -1,0 +1,8 @@
+# formats for type quit_msg
+ac.format.add             quit_msg [A] @msg@%N
+ac.format.add             quit_msg [anduril] @msg@%N
+ac.format.add             quit_msg @msg@ [A]%N
+ac.format.add             quit_msg @msg@ [anduril]%N
+ac.format.add             quit_msg @msg@%N
+# ---
+

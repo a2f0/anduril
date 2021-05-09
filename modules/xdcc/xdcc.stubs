@@ -1,0 +1,389 @@
+### $Id: xdcc.stubs,v 1.12 2003/10/10 07:50:22 wd Exp $
+ac.package xdcc
+
+alias xdcc (line) {
+    if (left(1 $word(0 $line)) == [-]) {
+	@:cmd = after(- $shift(line))
+	switch ($cmd) {
+	    (s) {
+		@:silent = 1
+	    }
+	}
+    }
+    @:cmd = shift(line)
+
+    if (cmd == []) {
+	@usage(xdcc)
+	return
+    }
+
+    switch ($cmd) {
+	(desc) {
+	    @:p = shift(line)
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@:p = after(# $p)
+	    } else {
+		@:pack = [#$p]
+	    }
+
+	    if (p == []) {
+		aerrecho must specify a pack number!
+		return
+	    }
+	    @:p--
+	    if (a.xdcc.packs[$p][files] == []) {
+		aerrecho no such pack $pack
+		return
+	    }
+
+	    @:desc = line
+
+	    if (desc == []) {
+		aerrecho must specify description!
+		return
+	    }
+
+	    @a.xdcc.packs[$p][desc] = desc
+	    aecho set description for $pack to "${desc}"
+	}
+	(doffer) {
+	    @:p = shift(line)
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@p = after(# $p)
+	    } else {
+		@:pack = [#$p]
+	    }
+
+	    if (p == []) {
+		aerrecho must specify a pack number!
+		return
+	    }
+	    @p--
+	    if (a.xdcc.packs[$p][files] == []) {
+		aerrecho no such pack $pack
+		return
+	    }
+
+	    ### if this is the last pack (we should be so lucky)
+	    ### then just delete it
+
+	    if (a.xdcc.pack_count - 1 == p) {
+		@a.xdcc.pack_count--
+		fe (files size desc note gets password) xx {
+		    ^assign -a.xdcc.packs[$p][$xx]
+		}
+	    } else {
+		### the unhappy case in which we have to shift
+		### all our packs down one number
+
+		while (p < a.xdcc.pack_count - 1) {
+		    fe (files size desc note gets password) xx {
+			@a.xdcc.packs[$p][$xx] = a.xdcc.packs[${p + 1}][$xx]
+		    }
+		    @p++
+		}
+
+		fe (files size desc note gets password) xx {
+		    ^assign -a.xdcc.packs[$p][$xx]
+		}
+		@a.xdcc.pack_count-- 
+	    }
+
+	    aecho deleted xdcc pack $pack
+	}
+	(ls) (list) {
+	    a.list.start u 5 xdcc packs
+	    a.list.hdr #
+	    a.list.hdr file
+	    a.list.hdr size
+	    a.list.hdr gets
+	    a.list.hdr description
+	    @:i= 0
+	    @:ts= 0
+	    while (i < a.xdcc.pack_count) {
+		a.list.add ${i + 1}
+		a.list.add $a.xdcc.packs[$i][files]
+		a.list.add $ac.size_fmt($a.xdcc.packs[$i][size])
+		a.list.add $a.xdcc.packs[$i][gets]
+		a.list.add $a.xdcc.packs[$i][desc]
+		@ts += a.xdcc.packs[$i][size]
+		@i++
+	    }
+	    a.list.end $ac.size_fmt($ts) offered
+	}
+	(load) {
+	    @:f = [$apath/etc/xdcc.packs]
+	    if (fexist($f)!=[-1]) {
+		aecho loading xdcc pack list from $f
+		^eval load $f
+	    }
+	}
+	(note) {
+	    @:p = shift(line)
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@p = after(# $p)
+	    } else {
+		@:pack=[#$p]
+	    }
+
+	    if (p==[]) {
+		aerrecho must specify a pack number!
+		return
+	    }
+	    @p--
+	    if (a.xdcc.packs[$p][files]==[]) {
+		aerrecho no such pack $pack
+		return
+	    }
+
+	    @:note=line
+
+	    if (note == []) {
+		@a.xdcc.packs[$p][note] = []
+		aecho unset note for $pack
+	    } else {
+		@a.xdcc.packs[$p][note]=note
+		aecho set note for $pack to "${note}"
+	    }
+	}
+	(offer) {
+	    @:packn = [${a.xdcc.pack_count + 1}]
+	    if (line != []) {
+		@:x[files] = line
+	    } else {
+		@:x[files] = ac.question(enter file(s) for pack $packn:)
+	    }
+	    if (x[files] == []) {
+		return
+	    }
+	    @:x[size] = a.xdcc.check_files($x[files])
+	    if (x[size] == 0) {
+		aerrecho could not add pack $packn
+		return
+	    }
+
+	    @:x[desc] = ac.question(enter description for pack $packn:)
+	    if (x[desc] == []) {
+		return
+	    }
+
+	    @:x[note] = ac.question(enter note for pack $packn (optional):)
+
+	    fe (files size desc note) xx {
+		@a.xdcc.packs[$a.xdcc.pack_count][$xx] = x[$xx]
+	    }
+	    @a.xdcc.packs[$a.xdcc.pack_count][gets] = 0
+	    @a.xdcc.pack_count++
+	    aecho added XDCC pack $packn\: $x[desc] \($ac.size_fmt($x[size]) / $#x[files] file(s)\)
+	}
+	(pass) (password) {
+	    @:p = shift(line)
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@p = after(# $p)
+	    } else {
+		@:pack = [#$p]
+	    }
+
+	    if (p == []) {
+		aerrecho must specify a pack number!
+		return
+	    }
+	    @p--
+	    if (a.xdcc.packs[$p][files] == []) {
+		aerrecho no such pack $pack
+		return
+	    }
+
+	    @:pass = line
+
+	    if (pass == []) {
+		@a.xdcc.packs[$p][password] = []
+		aecho unset password for $pack
+	    } else {
+		@a.xdcc.packs[$p][password]=pass
+		aecho set password for $pack to "${pass}"
+	    }
+	}
+	(pls) (plist) {
+	    if (silent) {
+		@:mcmd = [//^msg]
+	    } else {
+		@:mcmd = [msg]
+	    }
+
+	    @:t = []
+	    if (line != []) {
+		fe ($line) xx {
+		    if (channel($xx)) {
+			@t #= [$xx,]
+		    }
+		}
+	    } else {
+		@:t = C
+	    }
+
+	    if (!t) {
+		return
+	    }
+
+	    @:ts = 0
+	    @:i = [0]
+	    while (i < a.xdcc.pack_count) {
+		@ts += a.xdcc.packs[$i][size]
+		@i++
+	    }
+
+	    $(mcmd) $t $fparse(xdcc_plist $a.xdcc.pack_count $ac.size_fmt($ts))
+	    @i = 0
+	    while (i<a.xdcc.pack_count) {
+		$(mcmd) $t $fparse(xdcc_plist_body ${i+1} $ac.size_fmt($a.xdcc.packs[$i][size]) $a.xdcc.packs[$i][gets] $a.xdcc.packs[$i][desc])
+		if (a.xdcc.packs[$i][note]!=[]) {
+		    $(mcmd) $t $fparse(xdcc_plist_body_note $a.xdcc.packs[$i][note])
+		}
+		@i++
+	    }
+	}
+	(save) {
+	    @a.xdcc.save(1)
+	}
+	(send) {
+	    @:n = shift(line)
+	    @:p = shift(line)
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@p = after(# $p)
+	    } else {
+		@:pack=[#$p]
+	    }
+
+	    if (p == []) {
+		aerrecho must specify a pack number!
+		return
+	    }
+	    @p--
+	    if (a.xdcc.packs[$p][files] == []) {
+		aerrecho no such pack $pack
+		return
+	    }
+
+	    fe (a.xdcc.packs[$p][files]) xx {
+		//^dcc send $n $xx
+		//^notice $n [xdcc] sending pack $pack \($#a.xdcc.packs[$p][files] files)
+		aecho sent XDCC pack $pack to $n
+		@a.xdcc.packs[$p][gets]++
+	    }	
+	}
+	(*) {
+	    aerrecho unknown xdcc command $cmd
+	    @usage(xdcc)
+	    return
+	}
+    }
+}
+
+alias a.xdcc.check_files {
+    @:x = 0
+    fe ($*) xx {
+	if (fexist($xx) == -1) {
+	    aerrecho could not find file $xx
+	    return 0
+	} else {
+	    @x += fsize($xx)
+	}
+    }
+    return $x
+}
+
+alias a.xdcc.save {
+    if (!ac.config(xdcc_save_packs) && [$0] != 1) {
+	return
+    }
+    if (a.xdcc.pack_count <= 0) {
+	return
+    }
+    @:fd = a.save.open($apath/etc/xdcc.packs xdcc packs)
+    if (fd < 0) {
+	aerrecho could not open $file to save xdcc packs
+	return
+    }
+    @:i = 0
+    while (i < a.xdcc.pack_count) {
+	fe (files size desc comment gets) xx {
+	    @write($fd ^assign a.xdcc.packs[$i][$xx] $a.xdcc.packs[$i][$xx])
+	}
+	if (a.xdcc.packs[$i][note]) {
+	    @write($fd ^assign a.xdcc.packs[$i][note] $a.xdcc.packs[$i][note])
+	}
+	@i++
+    }
+    @write($fd ^assign a.xdcc.pack_count $a.xdcc.pack_count)
+    @close($fd)
+}
+
+alias a.xdcc.handle_ctcp {
+    switch ($1) {
+	(list) {
+	    @:ts = 0
+	    @:i = 0
+	    while (i < a.xdcc.pack_count) {
+		@ts += a.xdcc.packs[$i][size]
+		@i++
+	    }
+
+	    //^notice $0 $fparse(xdcc_plist $a.xdcc.pack_count $ac.size_fmt($ts))
+	    @i = 0
+	    while (i < a.xdcc.pack_count) {
+		//^notice $0 $fparse(xdcc_plist_body ${i+1} $ac.size_fmt($a.xdcc.packs[$i][size]) $a.xdcc.packs[$i][gets] $a.xdcc.packs[$i][desc])
+		if (a.xdcc.packs[$i][note] != []) {
+		    //notice $0 $fparse(xdcc_plist_body_note $a.xdcc.packs[$i][note])
+		}
+		@i++
+	    }			
+	}
+	(send) {
+	    @:p = [$2]
+	    if (p == []) {
+		//^notice $0 [xdcc] usage: XDCC SEND <pack#>
+		return
+	    }
+
+	    if (left(1 $p) == [#]) {
+		@:pack = p
+		@p = after(# $p)
+	    } else {
+		@:pack = [#$p]
+	    }
+	    @p--
+	    if (a.xdcc.packs[$p][files] == []) {
+		//^notice $0 [xdcc] no such pack $pack
+		return
+	    }
+
+	    if (a.xdcc.packs[$p][password] != [] && [$3] != a.xdcc.packs[$p][password]) {
+		//^notice $0 [xdcc] incorrect password for $pack
+		return
+	    }
+
+	    fe ($a.xdcc.packs[$p][files]) xx {
+		### EPIC will do this as a notice (yech) so stuff it in
+		### a timer to fix that.
+		^timer 2 dcc send $0 $xx
+		//^notice $0 [xdcc] sending pack $pack \($#a.xdcc.packs[$p][files] files)
+		aecho sent XDCC pack $pack to $0
+		@a.xdcc.packs[$p][gets]++
+	    }
+	}
+	(help) {
+	    //^notice $0 [xdcc] XDCC commands:
+	    //^notice $0 [xdcc] LIST - provides a list of packs offered
+	    //^notice $0 [xdcc] SEND <#> [password] - sends pack # to you
+	    //^notice $0 [xdcc] HELP - this message
+	}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

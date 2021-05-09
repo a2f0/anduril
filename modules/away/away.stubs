@@ -1,0 +1,157 @@
+### $Id: away.stubs,v 1.14 2002/07/27 02:56:31 wd Exp $
+ac.package away
+
+alias away (msg) {
+    if (builtin_expando(A)) {
+	aerrecho you're already set away!
+    }
+
+    if (ac.config(away_log)) {
+	@:l = [on]
+    } else {
+	@:l = [off]
+    }
+
+    if (ac.config(pager)) {
+	@:p = [on]
+    } else {
+	@:p = [off]
+    }
+
+    if (msg == []) {
+	@:msg = ac.config(away_msg)
+	if (msg == []) {
+	    if (ac.config(random_away)) {
+		@:msg = randread($apath/share/reasons/away)
+	    }
+	}
+    }
+
+    if (ac.config(public_away)) {
+	if (ac.config(away_chans) != []) {
+	    fe ($mychannels()) xx {
+		if (rmatch($xx $ac.config(away_chans))) {
+		    describe $xx $fparse(away $l $p $msg)
+		}
+	    }
+	} elsif (remws($ac.config(no_away_chans) / $mychannels()) != \
+		 mychannels()) {
+	    fe ($remws($ac.config(no_away_chans) / $mychannels())) xx {
+		describe $xx $fparse(away $l $p $msg)
+	    }
+	} else { 
+	    if (ac.module.find(channel)) {
+		ame $fparse(away $l $p $msg)
+	    }
+	}
+    }
+
+    aecho you are now set away
+    a.away.set
+    //away $msg
+}
+
+alias back (msg) {
+    if (msg == []) {
+	@:msg = ac.config(back_msg)
+	if (msg == []) {
+	    if (ac.config(random_back)) {
+		@:msg = randread($apath/share/reasons/back)
+	    }
+	}
+    }
+
+    if (ac.config(public_away)) {
+	if (ac.config(away_chans) != []) {
+	    fe ($mychannels()) xx {
+		if (rmatch($xx $ac.config(away_chans))) {
+		    describe $xx $fparse(back ${time() - a.away.since} $msg)
+		}
+	    }
+	} elsif (remws($ac.config(no_away_chans) / $mychannels()) != \
+		 mychannels()) {
+	    fe ($remws($ac.config(no_away_chans) / $mychannels())) xx {
+		describe $xx $fparse(back ${time() - a.away.since} $msg)
+	    }
+	} else { 
+	    if (ac.module.find(channel)) {
+		ame $fparse(back ${time() - a.away.since} $msg)
+	    }
+	}
+    }
+
+    @:msgs = a.away.msgs
+    a.away.unset
+    //away
+
+    # only read it if we've actually gotten something
+    if (msgs == 0 || msgs == []) {
+	aecho no messages received while you were away
+	if (ac.config(away_log)) {
+	    rmlog
+	}
+    } elsif (ac.config(auto_read_away_log)) {
+	readlog
+    } elsif (ac.config(away_log)) {
+	aecho $msgs messages received while you were away
+	aecho to read them use /readlog
+    }
+    ^assign -a.away.msgs
+}
+
+alias readlog (pid) {
+    if (pid == []) {
+	@:pid = pid()
+    }
+
+    @:f = [$apath/tmp/away.$pid]
+
+    if (fexist($f) == -1) {
+	aerrecho no away log for pid $pid
+	return
+    }
+
+    if (ac.config(away_log_window)) {
+	//^window new hide swap last
+    }
+
+    if (ac.module.find(less)) {
+	less $f
+    } else {
+	exec cat $f
+    }
+    input "delete log? [Y/n]: " {
+	if ([$0] == [y] || [$0] == []) {
+	    rmlog
+	}
+	if (ac.config(away_log_window)) {
+	    input "press enter to return to the other window" {
+		//^window killswap
+	    }
+	}
+    }
+}
+
+alias rmlog (pid) {
+    if (pid == []) {
+	@:pid = pid()
+    }
+
+    if (builtin_expando(A) != []) {
+	a.away.unset
+    }
+    @:f = [$apath/tmp/away.$pid]
+    if (fexist($f) == -1) {
+	aerrecho no away log for pid $pid
+	return
+    }
+
+    @unlink($f)
+    aecho removed away log for pid $pid
+
+    if (builtin_expando(A) != []) {
+	a.away.set
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

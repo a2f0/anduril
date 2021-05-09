@@ -1,0 +1,30 @@
+### $Id: config.am,v 1.22 2001/10/28 10:11:52 wd Exp $
+
+:new module config
+:mod config version 35
+:mod config desc configurator module
+:mod config author wd@anduril.org White_Dragon Chip Norkus
+:mod config depend box
+
+:command config [-a|-m] [[-]config] [value]
+:comm config desc simple configurator
+:comm config aliases aconfig set
+:comm config flags i
+:comm config help \
+this command allows you to change any of the configuration options \
+provided by modules in the script.  Issuing the command with no arguments \
+will list the items deemed to be relevant to the casual user.  If you want \
+to see all the configs do /config -a.  If you want to see all the configs \
+in a single module do /config -m <module. Otherwise, to see a single \
+config issue the command with the name of the config you want to see (e.g. \
+/config somevar), to set a variable, issue the command with the variable \
+name and a value for it.  To unset a variable, precede the variable name \
+with a -.  Variable names can be masked, in which case all matching \
+variables will be displayed or changed (e.g. /config *_log on).
+
+mstub config
+mstub set
+
+# replace the default /set command so it handles anduril variables too
+
+# vim: syntax=off ts=3 ai smartindent

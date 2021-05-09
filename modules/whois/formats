@@ -1,0 +1,32 @@
+# formats for type whois and slaves whois_arg whois_server
+ac.format.add                whois $G @nick@ is @user@@@host@ \(@country@\)
+ac.format.add            whois_arg $G @type@: @args@
+ac.format.add         whois_server $G server: @server@ \(@args@\)
+
+ac.format.add                whois $(dcol2)[$(hcol2)whois     $(dcol2)]%n : $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@ $(dcol2)\(%n@country@$(dcol2))
+ac.format.add            whois_arg $(dcol2)[$(col2)$pad(10 " " @type@)$(dcol2)]%n : @args@
+ac.format.add         whois_server $(dcol2)[$(col2)server    $(dcol2)]%n : @server@ $(dcol2)\(%n@args@$(dcol2))
+
+ac.format.add                whois      $(hcol1)whois $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)/$(ncol)@country@
+ac.format.add            whois_arg $(col1)$ac.len(-10 @type@)$(ncol) @args@
+ac.format.add         whois_server     $(col1)server $(ncol)@server@ $(dcol2)\($(ncol)@args@$(dcol2))
+
+ac.format.add                whois $(hcol2)whois     $(col2): $(hcol1)@nick@$(dcol1)!$(col1)@user@$(dcol1)@$(col1)@host@ $(dcol1)[$(ncol)@country@$(dcol1)]
+ac.format.add            whois_arg $(col2)$ac.len(10 @type@)$(dcol2):$(ncol) @args@
+ac.format.add         whois_server $(col2)server    $(dcol2): $(ncol)@server@ $(dcol1)[$(ncol)@args@$(dcol1)]
+# ---
+
+# formats for type whowas and slaves whowas_arg whowas_server
+ac.format.add               whowas $(dcol2)[$(hcol2)whowas    $(dcol2)]%n : $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@ $(dcol2)\(%n@country@$(dcol2))
+ac.format.add           whowas_arg $(dcol2)[$(col2)$pad(10 " " @type@)$(dcol2)]%n : @args@
+ac.format.add        whowas_server $(dcol2)[$(col2)server    $(dcol2)]%n : @server@ $(dcol2)\(%n@args@$(dcol2))
+
+ac.format.add               whowas     $(hcol1)whowas $(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)/$(ncol)@country@
+ac.format.add           whowas_arg $(col1)$ac.len(-10 @type@)$(ncol) @args@
+ac.format.add        whowas_server     $(col1)server $(ncol)@server@ $(dcol2)\($(ncol)@args@$(dcol2))
+
+ac.format.add               whowas $(hcol2)whowas    $(col2): $(hcol1)@nick@$(dcol1)!$(col1)@user@$(dcol1)@$(col1)@host@ $(dcol1)[$(ncol)@country@$(dcol1)]
+ac.format.add           whowas_arg 
+ac.format.add        whowas_server 
+# ---
+

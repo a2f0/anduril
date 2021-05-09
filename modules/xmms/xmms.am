@@ -1,0 +1,157 @@
+### $Id: xmms.am,v 1.11 2002/07/10 20:29:31 wd Exp $
+
+:new module xmms
+:mod xmms version 27
+:mod xmms desc interface to the X Multimedia System
+:mod xmms author wd@anduril.org White_Dragon Chip Norkus
+:mod xmms dep box
+
+:new command xmms [command] [args]
+:comm xmms desc command to interface with xmms
+:comm xmms flags i
+:comm xmms aliases mp3
+:comm xmms xref form:xmms_info
+:comm xmms help \
+this command is used to control the xmms player, the following subcommands \
+are available: %n \
+- find [partial name] %n %t tries to find a song matching 'partial name' \
+(one word only) %n \
+- info %n %t provides information on the current song %n \
+- jump [partial name] [number] %n %t tries to find a song matching the \
+first argument (one word only).  If 'number' is supplied, finds the \
+'number'th match of the partial name and plays the found song %n \
+- list %n %t displays the current xmms playlist %n \
+- mute %n %t either mutes or un-mutes xmms %n \
+- next %n %t skips to the next song %n \
+- pause %n %t pauses playing %n \
+- pinfo %n %t displays 'info' data to the current query/channel %n \
+- play %n %t starts xmms playing %n \
+- prev %n %t skips to the previous song %n \
+- repeat [on|off] %n %t either toggles (no args) or explicitly sets repeat \
+mode %n \
+- shuffle [on|off] %n %t either toggles (no args) or explicitly sets shuffle \
+mode %n \
+- skip <number> %n %t skips to the song number in the playlist
+- stop %n %t stops xmms
+mstub xmms
+
+
+:new format xmms_info format used to display mp3 info
+:form xmms_info arguments @plnum@ @bitrate@ @freq@ @stereo@ @len@ @played@ @song@
+:form xmms_info xref comm:xmms
+
+:new config xmms_auto_echo automatically display playing songs?
+:conf xmms_auto_echo value 1
+:conf xmms_auto_echo flags b
+:conf xmms_auto_echo xref comm:xmms form:xmms
+:conf xmms_auto_echo help \
+
+if (fexist($apath/share/xmms/epic-xmms) == -1) {
+	aecho you don't have the epic-xmms program which is required to interface
+	aecho with XMMS.  Would you like to have it built now? \(you may examine
+	aecho the program in $apath/share/xmms/\)
+	@:mk = ac.question(build epic-xmms from source? [y/N]: )
+	if (left(1 $mk) != [y]) {
+		aerrecho you have opted not to build epic-xmms, this module will
+		aerrecho not function without it.
+		return
+	}
+	exec -name xmms-build \(cd $apath/share/xmms && sh ./make.sh\)
+	wait %xmms-build
+	if (fexist($apath/share/xmms/epic-xmms) == -1) {
+		aerrecho the epic-xmms program failed to compile.  please contact
+		aerrecho wd@anduril.org to report this (include your OS and any
+		aerrecho applicable error messages)
+	} else {
+		aecho epic-xmms built successfully.
+	}
+}
+
+### wrap everything here in a file check, just in case there are problems
+### with the above.
+if (fexist($apath/share/xmms/epic-xmms) != -1) {
+	@a.xmms.pinfo = 0
+	@a.xmms.list.cnt = 0
+	@a.xmms.list.list = 0
+	@a.xmms.volume = [50 50]
+	on ^exec "epic-xmms $*" {
+		@:cmd = [$1]
+		@:args = [$2-]
+
+		switch ($cmd) {
+			(info) {
+				@:plnum = shift(:args)
+				@:br = trunc(2 ${shift(:args) / 1000})
+				@:hz = shift(:args)
+				@:stereo = shift(:args) == [2] ? [stereo] : [mono]
+				@:len = shift(:args)
+				@:played = shift(:args)
+				@:song = args
+				if (hz == [44.10]) @:hz = [44.1]
+			
+				if (after(. $br) == [00]) {
+					 @:br = before(. $br)
+				}
+
+				if (a.xmms.pinfo == 1) {
+					timer 0 msg $T $fparse(xmms_info $plnum $br $hz $stereo $len $played $song)
+				} else {
+					if (ac.config(xmms_auto_echo) || a.xmms.pinfo == -1) {
+						 aecho $fparse(xmms_info $plnum $br $hz $stereo $len $played $song)
+					}
+				}
+				@a.xmms.pinfo = 0
+			}
+			(file) {
+				@a.xmms.list[$a.xmms.list.cnt] = args
+				@a.xmms.list.cnt++
+			}
+			(matches) {
+				if (a.xmms.list.list) {
+					@:i = 0
+					a.list.start n 1 XMMS playlist
+					for (@:i = 0,i < a.xmms.list.cnt, @:i++) {
+						a.list.add $a.xmms.list[$i]
+					}
+					a.list.end $i entries
+					@a.xmms.list.list = 0
+				} else {
+					a.list.start n 1 songs matching $a.xmms.list.find
+					for (@:i = 0,i < a.xmms.list.cnt, @:i++) {
+						a.list.add $a.xmms.list[$i]
+					}
+					a.list.end $i entries
+				}
+
+				@a.xmms.list.cnt = 0
+			}
+			(volume) {
+				@a.xmms.volume = args
+			}
+			(shuffle) (repeat) {
+				aecho $cmd is now $args
+			}
+			(jump) {
+				aerrecho jump: no songs match $args
+			}
+			(skip) {
+				aerrecho skip: track $args does not exist
+			}
+		}
+	}
+	on ^exec_exit "epic-xmms $*" {
+		aerrecho epic-xmms has terminated, unloading the xmms module
+		@ac.module.unload(xmms)
+	}
+
+	exec -direct -name epic-xmms $apath/share/xmms/epic-xmms
+} else {
+	aecho no epic-xmms program is available, unloading xmms module
+	timer 1 ac.module.unload xmms
+}
+
+^eval ^on #-exit $ac.hash(xmms) "*" {
+	exec -in epic-xmms quit
+}
+# vim: syntax=off ts=3 ai smartindent
+

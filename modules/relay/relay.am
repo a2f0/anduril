@@ -1,0 +1,75 @@
+### $Id: relay.am,v 1.17 2001/09/23 11:01:13 wd Exp $
+
+:new module relay
+:mod relay version 23
+:mod relay desc relay setup for various events
+:mod relay author wd@anduril.org White_Dragon Chip Norkus
+:mod relay dep usage
+
+### relay_add
+### args: arrayname, stuff to add
+
+mstub a.relay_add
+
+^eval on #-msg $ac.hash(relay) "*" {a.relay_add msg m $0 $sar(/@/ /$userhost()) $1-}
+^eval on #-action $ac.hash(relay) '% $$servernick() *' {a.relay_add msg a $0 $sar(/@/ /$userhost()) $2-}
+
+^eval on #-send_msg $ac.hash(relay) "*" {a.relay_add smsg m $*}
+^eval on #-send_action $ac.hash(relay) "*" {
+	if (!ischannel($0)) {
+		a.relay_add smsg a $servernick() $1-
+	}
+}
+
+:new command relm [#] [nick|#channel]
+:comm relm desc relays a message
+:comm relm flags i   
+:comm relm help \
+this command relays a message to either the current target (query or \
+channel), or the specified one.  If the message number is not specified \
+it relays the last message received (unless that message was received \
+within the last relay_wait seconds (config).  Note that actions are also \
+put into the message relay array. If the message number is specified, it \
+relays that number.  Numbers go in ascending order, where the lowest (0) \
+is the current message, and the highest is (relay_size) the oldest \
+message.  If a ? (literal) is given instead of a number, all the saved \
+messages are listed.
+
+mstub relm
+
+:new command relsm [#] [nick|#channel]
+:comm relsm desc relays a sent message
+:comm relsm flags i   
+:comm relsm help \
+this command relays a sent message to the current target (or the specified \
+one). see the /relm help for information.  Unlike relm, the time limit \
+for sent message array is not imposed (for obvious reasons)
+
+mstub relsm
+
+:new command paste <[-s]|[line|line1-line2|line,line,...]> [nick|#channel]
+:comm paste desc pastes lines of text to a target directly from the client
+:comm paste flags i
+:comm paste help \
+this command effectively pastes a line, or a number of them, directly from \
+the client's buffer to the specified target
+
+mstub paste
+
+:new config paste_show_lines number of lines to show with a /paste -s (or just /paste)
+:conf paste_show_lines value 15
+:conf paste_show_lines flags n
+
+:new config relay track things for relay commands?
+:conf relay value 1
+:conf relay flags b
+
+:config relay_size size of each relay array
+:conf relay_size value 20
+:conf relay_size flags n
+
+:new config relay_wait number of seconds a msg must be saved for before it is the default in a relay
+:conf relay_wait value 3
+:conf relay_wait flags n
+
+# vim: syntax=off ts=3 ai smartindent

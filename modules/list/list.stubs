@@ -1,0 +1,318 @@
+### $Id: list.stubs,v 1.8 2001/10/28 10:11:55 wd Exp $
+ac.package list
+
+### a.list.start:
+### args: type, number of columns, header
+### this command is required to initialize the necessary
+### elements to make a list.  it describes how many columns
+### are in the list, and what the header should be (if any)
+### if the number of columns isn't specified, 0 columns is
+### selected by default, the list can be of a type n,
+### a numbered list (each item in a line is preceded by a number)
+### or u, an unnumbered list (columns are listed solo)
+### also, the type can be prefixed by an m, implying that this is
+### a multiline list.  In this case, the number of columns will
+### actually stand for the number of lines each item is.  All
+### multiline lists are considered to be one column. The type may also be
+### prefixed by 'h' indicating that no header data should be output.
+### the column number can be 0 which will instruct the lister to 
+### decide on the number of columns based on screen width and column 
+### width.  if the type is specified with an = character at the end,
+### all columns will be kept to the same length (the one calculated to
+### be the longest).
+
+alias a.list.start (type, cols, hdr) {
+    if (a.list.cols != []) {
+	a.list.end
+	aerrecho previous list never called 'list.end', bad code!
+    }
+	
+    if (!type) {
+	@:type = [u]
+    }
+    if (cols == []) {
+	@:cols=0
+    }
+	
+    if (pass(m $type) != []) {
+	@a.list.type = type = strip(m $type)
+	@a.list.multiline = cols
+	@a.list.cols = 1
+    } else {
+	@a.list.type = type
+	@a.list.multiline = 0
+	@a.list.cols = cols
+    }
+    if (pass(h $a.list.type) != []) {
+	@a.list.showhdr = 0
+	@a.list.type = strip(h $a.list.type)
+    } else {
+	@a.list.showhdr = 1
+    }
+
+    @a.list.hdr = hdr
+	
+    if (a.list.cols <= 0) {
+	@a.list.samelen = 1
+    } else {
+	@a.list.samelen = 0
+    }
+	
+    if (pass(= $a.list.type)) {
+	@a.list.samelen = 1	
+	@a.list.type=strip(= $a.list.type)
+    }
+    if (a.list.type != [n] && a.list.type != [u]) {
+	@a.list.type = [u]
+    }	
+
+    @a.list.count=1
+    @a.list.itemlen=0
+    @a.list.headers=0
+}
+
+### a.list.hdr:
+### args: header
+### for each header needed, this command should be called
+### with the header's data.  lists with unspecified
+### columns can only use the first header added (which will
+### be repeated by however many columns are output)
+
+alias a.list.hdr {
+    @a.list.headers++
+    @a.list.header[$a.list.headers]=[$*]
+    @:l=strlen($stripcrap(ALL $*))
+    if (a.list.cols>0 && !a.list.samelen) {
+	@:n=a.list.fakemod($a.list.headers $a.list.cols)
+	if (l>a.list.itemlen[$n]) {
+	    @a.list.itemlen[$n]=l
+	}
+    } else {
+	if (l>a.list.itemlen) {
+	    @a.list.itemlen=l
+	}
+    }
+}
+
+### a.list.window
+### args: window
+### if the output should be placed in a different window, set
+### that information here
+
+alias a.list.window {
+    @a.list.window=[$0]
+}
+
+### a.list.add
+### args: item to add
+### this command simply adds another item to the list of
+### elements to be displayed.  all items are displayed
+### when list.end is called
+
+alias a.list.add (item) {
+    if (item == []) {
+	@a.list.item[$a.list.count] = [ ]
+	@a.list.count++
+	return
+    }
+    @a.list.item[$a.list.count] = item
+    @:l = strlen($stripcrap(ALL $item))
+    if (a.list.cols > 0 && !a.list.samelen) {
+	@:n = a.list.fakemod($a.list.count $a.list.cols)
+	if (l > a.list.itemlen[$n]) {
+	    @a.list.itemlen[$n]=l
+	}
+    } else {
+	if (l > a.list.itemlen) {
+	    @a.list.itemlen=l
+	}
+    }
+    @a.list.count++
+}
+
+### a.list.end
+### args: footer (if any)
+### this command ends a list, causing the display of
+### the items, etc.
+
+alias a.list.end (footer) {
+    if (a.list.window) {
+	@:cmd = [xecho -window $a.list.window]
+    } else {
+	@:cmd = [echo]
+    }
+	
+    ### dumb placeholder stuff
+    @:p = [#]
+	
+    if (a.list.showhdr) {
+	a.box.echocmd $cmd
+	a.box.start $a.list.hdr
+    }
+		
+    if (a.list.type == [n]) {
+	### a numbered list
+
+	@:clen = strlen($a.list.count)		
+	@:o = []
+	### if there are list columns already, do headers!
+	if (a.list.cols > 0) {
+	    for (@:i=1,i <= a.list.headers,@:i++) {
+		if (o == []) {
+		    @:bleah = [nlist $clen $p]
+		} else {
+		    @:bleah = [list]
+		}
+		if (a.list.samelen) {
+		    @push(o $fparse($bleah $a.list.itemlen $a.list.header[$i]))
+		} else {
+		    @push(o $fparse($bleah $a.list.itemlen[$a.list.fakemod($i $a.list.cols)] $a.list.header[$i]))
+		}
+	    }
+	    if (o) {
+		a.box.echo $o
+	    }
+	    @:o = []
+	    @:c = 1
+	    for (@:i=1,i < a.list.count,@:i++) {
+		if (o == []) {
+		    @:bleah = [nlist_data $clen $c]
+		} else {
+		    @:bleah = [list_data]
+		}
+		if (a.list.samelen) {
+		    @push(o $fparse($bleah $a.list.itemlen $a.list.item[$i]))
+		} else {
+		    @push(o $fparse($bleah $a.list.itemlen[$a.list.fakemod($i $a.list.cols)] $a.list.item[$i]))
+		}
+		^assign -a.list.item[$i]
+		if (i % a.list.cols == 0) {
+		    a.box.echo $o
+		    @:o = []
+		}
+		if (a.list.multiline) {
+		    if (!(i % a.list.multiline)) {
+			@:c = i / a.list.multiline + 1
+		    } else {
+			@:c = [-]
+		    }
+		} elsif (i % a.list.cols == a.list.cols - 1) {
+		    @:c++
+		}
+	    }
+	} else {
+	    ### now, if we don't know how many columns we have, well, find out
+	    ### easily
+	    @:l = strlen($stripcrap(ALL $fparse(nlist_data $clen $[$clen]p $a.list.itemlen $p) ))
+	    @:o = word(0 $geom()) - 1
+	    @:o -= strlen($stripcrap(ALL $fparse(box_side)))
+	    @a.list.cols = (o - (o % l)) / l
+
+	    ### if they gave us a header, do the repeat thing
+	    if (a.list.headers) {
+		$(cmd) $fparse(box_side $repeat($a.list.cols $fparse(nlist $clen $p $a.list.itemlen $a.list.header[1]) ))
+	    }
+	    @:o = []
+
+	    ### now output the list, with the updated column stuff
+	    @:c = 1
+	    for (@:i=1,i < a.list.count,@:i++) {
+		if (a.list.samelen) {
+		    @push(:o $fparse(nlist_data $clen $c $a.list.itemlen $a.list.item[$i]))
+		} else {
+		    @push(:o $fparse(nlist_data $clen $c $a.list.itemlen[$a.list.fakemod($i $a.list.cols)] $a.list.item[$i]))
+		}
+		^assign -a.list.item[$i]
+		if (i % a.list.cols == 0) {
+		    a.box.echo $o
+		    @:o = []
+		}
+		if (a.list.multiline) {
+		    if (!(i % a.list.multiline)) {
+			@:c = i / a.list.multiline + 1
+		    } else {
+			@:c = [-]
+		    }
+		} else {
+		    @:c++
+		}
+	    }
+	}
+    } else {
+	### an unnumbered list
+
+	### if there are list columns already, do headers!
+	@:o = []
+	if (a.list.cols > 0) {
+	    @:clen = strlen($a.list.count)
+	    ### dumb placeholder stuff
+	    @:p = [#]
+	    for (@:i = 1,i <= a.list.headers,@:i++) {
+		if (a.list.samelen) {
+		    @push(:o $fparse(list $a.list.itemlen $a.list.header[$i]))
+		} else {
+		    @push(:o $fparse(list $a.list.itemlen[$a.list.fakemod($i $a.list.cols)] $a.list.header[$i]))
+		}
+	    }
+	    if (o) {
+		a.box.echo $o
+	    }
+	}
+		
+	### now, if we don't know how many columns we have, well, find out easily
+	if (a.list.cols <= 0) {
+	    @:l = strlen($stripcrap(ALL $fparse(list_data $a.list.itemlen $[$a.list.itemlen]p) ))
+	    @:o = word(0 $geom()) - 1
+	    @:o -= strlen($stripcrap(ALL $fparse(box_side)))
+	    @a.list.cols = (o - (o % l)) / l
+
+	    ### if they gave us a header, do the repeat thing
+	    if (a.list.headers) {
+		$(cmd) $fparse(box_side $repeat($a.list.cols $fparse(list $a.list.itemlen $list.header[1]) ))
+	    }
+	}
+	@:o = []
+
+	### now output the list, with the updated column stuff
+	for (@:i = 1,i < a.list.count,@:i++) {
+	    if (a.list.samelen) {
+		@push(:o $fparse(list_data $a.list.itemlen $a.list.item[$i]))
+	    } else {
+		@push(:o $fparse(list_data $a.list.itemlen[$a.list.fakemod($i $a.list.cols)] $a.list.item[$i]))
+	    }
+	    ^assign -a.list.item[$i]
+	    if (i % a.list.cols == 0) {
+		a.box.echo $o
+		@:o = []
+	    }
+	}
+    }
+	
+    ### output any leftovers		
+    if (o) {
+	a.box.echo $o
+    }
+    
+    if (a.list.showhdr) {
+	a.box.end $footer
+    }
+    
+    # cleanup
+    fe ($aliasctl(assign pmatch a.list.*)) xx {
+	^assign -$xx
+    }
+}
+
+### support bit, a.list.fakemod takes the modulus
+### of two arguments, and if it is 0 returns the second
+
+alias a.list.fakemod (a, b) {
+    @:n = a % b
+    if (!n) {
+	return $b
+    } else {
+	return $n
+    }
+}
+
+# vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

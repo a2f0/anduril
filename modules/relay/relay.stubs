@@ -1,0 +1,168 @@
+### $Id: relay.stubs,v 1.6 2001/09/23 11:01:13 wd Exp $
+ac.package relay
+
+alias a.relay_add {
+	if (![$1] || !ac.config(relay)) {
+		return
+	}
+
+	@:n=ac.config(relay_size)-1
+	if (!n) {
+		return
+	}
+	@:t=time()
+	@:s=word($n $(a.relay_$(0)list))
+	^assign -$(a.relay_$(0))[$s]
+	
+	@a.relay_$(0)list=[$t $leftw($n $(a.relay_$(0)list))]
+	@a.relay_$(0)[$t]=[$1-]
+}
+
+alias relm {
+	@:n=0
+	@:t=builtin_expando(T)
+	if ([$0] && isnumber($0)) {
+		if ([$0]>=ac.config(relay_size)) {
+			aerrecho index number is larger than relay array size
+			return
+		}{
+			@:n=[$0]
+		}
+	}{
+		if ([$0]) {
+			if ([$0]==[?]) {
+				@:i=#a.relay_msglist-1
+				fe ($revw($a.relay_msglist)) xx {
+					switch ($word(0 $a.relay_msg[$xx])) {
+						(a) {
+							aecho [$[-2]i] $fparse(maction $restw(1 $a.relay_msg[$xx]))
+						}
+						(m) {
+							aecho [$[-2]i] $fparse(msg $restw(1 $a.relay_msg[$xx]))
+						}
+					}
+					@:i--
+				}
+				return
+			}{
+				@:t=[$0]
+			}
+			if ([$1]) {
+				@usage(relm)
+				return
+			}
+		}
+	}
+	if ((time() - word(0 $a.relay_msglist)) <= ac.config(relay_wait)) {
+		@:n++
+	}
+	@:s=a.relay_msg[$word($n $a.relay_msglist)]
+	
+	switch ($word(0 $s)) {
+		(a) {
+			msg $t $fparse(maction $restw(1 $s))
+		}
+		(m) {
+			msg $t $fparse(msg $restw(1 $s))
+		}
+	}
+}
+
+alias relsm {
+	@:n=0
+	@:t=builtin_expando(T)
+	if ([$0] && isnumber($0)) {
+		if ([$0]>=ac.config(relay_size)) {
+			aerrecho index number is larger than relay array size
+			return
+		}{
+			@:n=[$0]
+		}
+	}{
+		if ([$0]) {
+			if ([$0]==[?]) {
+				@:i=#a.relay_smsglist-1
+				fe ($revw($a.relay_smsglist)) xx {
+					switch ($word(0 $a.relay_smsg[$xx])) {
+						(a) {
+							aecho [$[-2]i] $fparse(send_maction $restw(1 $a.relay_smsg[$xx]))
+						}
+						(m) {
+							aecho [$[-2]i] $fparse(send_msg $restw(1 $a.relay_smsg[$xx]))
+						}
+					}
+					@:i--
+				}
+				return
+			}{
+				@:t=[$0]
+			}
+			if ([$1]) {
+				@usage(relm)
+				return
+			}
+		}
+	}
+
+	@:s=a.relay_smsg[$word($n $a.relay_smsglist)]
+	
+	switch ($word(0 $s)) {
+		(a) {
+			msg $t $fparse(send_maction $restw(1 $s))
+		}
+ 		(m) {
+			msg $t $fparse(send_msg $restw(1 $s))
+		}
+	}
+}
+
+alias paste {
+	@:line=[$*]
+	
+	if ([$0]==[-s] || ![$0]) {
+		@:show++
+		@:winlev = getset(LASTLOG_LEVEL)
+		@shift(line)
+		@:x=0
+		for (@:i=ac.config(paste_show_lines),i>=[1],@:i--) {
+			@:lines[$x]=line($I)
+			@:x++
+		}
+	} else {
+		@:s=shift(line)
+		
+		@:x=0
+		fe ($sar(/,/ /$s)) xx {
+			if (match(*-* $xx)) {
+				for (@:i=after(- $xx),i>=before(- $xx),@:i--) {
+					@:lines[$x]=line($i)
+					@:x++
+				}
+			} else {
+				@:lines[$x]=line($xx)
+				@:x++
+			}
+		}
+	}
+	
+	if (line) {
+		@:t=shift(line)
+	}{
+		@:t=builtin_expando(T)
+	}
+	
+	if (show) {
+		^window lastlog_level none
+	}
+	for (@:i=0,i<x,@:i++) {
+		if (show) {
+			xecho -NOLOG [$[-3]{x-i}] $lines[$i]
+		}{
+			msg $t $lines[$i]
+		}
+	}
+	if (show) {
+		^window lastlog_level $winlev
+	}
+}
+# vim: syntax=off ts=3 ai smartindent

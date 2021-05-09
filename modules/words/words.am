@@ -1,0 +1,248 @@
+### $Id: words.am,v 1.12 2004/03/03 18:12:48 wd Exp $
+
+:new module words
+:mod words version 18
+:mod words desc provides banned word and highlighted word support
+:mod words author wd@anduril.org White_Dragon Chip Norkus
+:mod words save_cmd a.words.save
+:mod words depend channel
+
+:new config words_strict use strict matching with words (more expensive)
+:conf words_strict type b
+:conf words_strict value 0
+:conf words_strict help \
+this setting causes the script to be much more scrutinous in its matching of \
+banned and highlighted words.  doing this requires a significant investment \
+in terms of CPU compared to the normal method, and so you may not wish to use \
+this, especially in large channels.  however, if used, it ensures that words \
+matched are not simply part of larger words.  for example, if matching for \
+'wd', it will match '[wd]' but not 'crowd'.  effectively, it checks for \
+extra alphabetic characters which would make up a larger word, and if the \
+word is part of such a longer string, it's not considered a match.
+
+:new config banword_action action to perform when a banned word is detected
+:conf banword_action type s
+:conf banword_action value kick %c %n banned word %w detected.
+:conf banword_action xref comm:banword
+:conf banword_action help \
+this is the command that will be performed if a banned word is detected.  \
+three expansions are supplied: %%c expands to the channel in which the banned \
+word was detected; %%n expands to the user who produced the banned word; %%w \
+expands to the word that they used.  the default action is to simply kick the \
+user, and inform them that they used a banned word.  however, if you wanted \
+to kick and ban the user for 5 minutes for using a banned word, you might do: \
+/config banword_action tbk 5 %%c %%n banned word %%w detected.
+
+:new config hiword_highlight highlighting used on hiwords
+:conf hiword_highlight value bold
+:conf hiword_highlight flags w
+:conf hiword_highlight change_cmd a.words.chng.highlight
+:conf hiword_highlight xref comm:hiword conf:words_strict conf:hiword_notify
+:conf hiword_highlight help \
+this setting allows you to change the highlighting used for highlighted \
+words.  the available types are 'none', 'bold', 'underline', and any of the \
+values available in $cparse(6).
+
+:new config hiword_notify flag window notification for highlighted words?
+:conf hiword_notify value 1
+:conf hiword_notify flags b
+:conf hiword_notify xref comm:hiword conf:words_strict conf:hiword_highlight
+:conf hiword_notify help \
+this setting allows you to specify whether or not a window will be flagged as \
+active (notified) when someone uses a highlighted word in that window.
+
+:new config hiword_auto_nick automatically use your nickname as a hiword?
+:conf hiword_auto_nick value 0
+:conf hiword_auto_nick flags bi
+:conf hiword_auto_nick xref comm:hiword conf:words_strict conf:hiword_highlight
+:conf hiword_auto_nick help \
+this setting, if on, will cause the script to always automatically use your \
+current nickname as a highlighted word.
+
+:new config hiword_away_log log highlighted lines when away?
+:conf hiword_away_log value 1
+:conf hiword_away_log flags bi
+:conf hiword_away_log xref comm:hiword conf:words_strict
+:conf hiword_auto_log help \
+if this setting is on, any lines which contain a highlighted word will be \
+logged to your away log (if the away module is loaded and logging is on) \
+using the appropriate channel formats.
+
+:new command banword [network] [channel] [-][word]
+:comm banword desc handles banned words
+:comm banword aliases bword badword
+:comm banword xref comm:hiword conf:words_strict conf:banword_action
+:comm banword help \
+this command allows you to handle the 'banned words' list.  banned words can \
+set on a per-network, per-channel basis, or both.  to ban usage of the word \
+'cow' in #wd on DALnet, you might do: /banword dalnet #wd cow.  to list banned \
+words for #wd on DALnet, you can do: /banword dalnet #wd.  If you want to ban \
+'cow' on #wd on any network, you can do /banword * #wd cow, and so on.  to \
+remove a banned word, simply prefix it with a '-' sign.
+
+mstub banword
+
+:new command hiword [network] [channel] [-][word]
+:comm hiword desc handles highlighted words
+:comm hiword aliases hword
+:comm hiword xref \
+comm:banword conf:words_strict conf:hiword_highlight conf:hiword_notify
+:comm hiword help \
+this command allows to change highlighted word settings.  highlighted words \
+can be set on a per network, or per channel basis, or both.  this command \
+works in exactly the same manner as the /banword command.
+
+mstub hiword
+mstub a.words.save
+
+
+### the hook function to check for banned and highlighted words.  whoopee
+alias a.words.hook (type, from, chan, text) {
+    ### banned word check first.  only done for non-ops
+    if (!ischanop($from $chan)) {
+	@:net = a.network.get()
+	for xx in ($aliasctl(assign match a.words.ban.)) {
+	    @:n = decode($after(-1 . $xx))
+	    @:c = word(1 $n)
+	    @:n = word(0 $n)
+	    
+	    if (match($n $net) && match($c $chan)) {
+		@push(:words $($xx))
+	    }
+	}
+	@:words = uniq($words)
+	@:word = []
+	if (words != []) {
+	    if (ac.config(words_strict)) {
+		fe ($words) xx {
+		    if (a.words.check($xx $text)) {
+			@:word = xx
+			break
+		    }
+		}
+	    } else {
+		fe ($words) xx {
+		    if (match(*$xx* $text)) {
+			@:word = xx
+			break
+		    }
+		}
+	    }
+	}
+	if (word) {
+	    $msar(g%c$chan%n$from%w$word$ac.config(banword_action))
+	}
+    }
+
+    # now highlighted words.  this works just about exactly the same as banned
+    # words.  already highlighted/otherwise tweaked words probably won't
+    # match here.  oh well.
+    if (ac.config(hiword_auto_nick)) {
+	@:words = servernick()
+    } else {
+	@:words = []
+    }
+    @:net = a.network.get()
+    for xx in ($aliasctl(assign match a.words.hi.)) {
+	@:n = decode($after(-1 . $xx))
+	@:c = word(1 $n)
+	@:n = word(0 $n)
+	
+	if (match($n $net) && match($c $chan)) {
+	    @push(:words $($xx))
+	}
+    }
+    @:words = uniq($words)
+    @:newtext = text
+    @:win = winchan($chan $builtin_expando(S))
+    if (words != []) {
+	if (ac.config(words_strict)) {
+	    fe ($words) xx {
+		if (a.words.check($xx $text)) {
+		    if (ac.config(hiword_notify) && win != winnum() && \
+			findw($win $notifywindows()) == -1) {
+			//^window $win notified
+		    }
+		    if (a.words.hiflag != []) {
+			@sar(igr$xx$a.words.hiflag$xx:newtext)
+		    } else {
+			return
+		    }
+		}
+	    }
+	} else {
+	    fe ($words) xx {
+		if (match(*$xx* $text)) {
+		    if (ac.config(hiword_notify) && win != winnum() && \
+			findw($win $notifywindows()) == -1) {
+			//^window $win notified
+		    }
+		    if (a.words.hiflag != []) {
+			@sar(igr$xx$a.words.hiflag$xx:newtext)
+		    } else {
+			return
+		    }
+		}
+	    }
+	}
+    }
+
+    if (ac.config(away_log) && builtin_expando(A) != [] && newtext != text) {
+	@a.log($a.away.log $fparse(public_other $from $chan $newtext))
+    }
+    return $newtext
+}
+
+### the function which does complex word-checking for 'words_strict'
+alias a.words.check (word, text) {
+    @:text = pattern(*$word* $stripcrap(ALL $text))
+    if (text == []) {
+	return 0
+    }
+
+    ### create our filter, we always pass all alphabet soup stuff, we also
+    ### have to pass any other characters the user specifically set in the
+    ### word
+    @:filter = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
+    @:filter #= strip($filter $word)
+
+    ### now, the way this works:  pass the allowable bits, plus any alphanum
+    ### chars through.  thus, if catching for 'wd' on '[crowd]', we still
+    ### get 'crowd', and know it doesn't match 'wd'
+    for xx in ($text) {
+	if (pass($filter $xx) == word) {
+	    return 1
+	}
+    }
+
+    return 0
+}
+
+### this simply sets our highlight flag internally.
+alias a.words.chng.highlight (conf, oldval) {
+    switch ($ac.config(hiword_highlight)) {
+	(n) (no) (none) {
+	    @a.words.hiflag = []
+	}
+	(b) (bold) {
+	    @a.words.hiflag = []
+	}
+	(u) (ul) (underline) {
+	    @a.words.hiflag = []
+	}
+	(*) {
+	    if (left(1 $ac.config(hiword_highlight)) == [%]) {
+		@a.words.hiflag = cparse($ac.config(hiword_highlight))
+	    }
+	}
+    }
+}
+    
+if (fexist($apath/etc/words.banned) != -1) {
+    eval load $apath/etc/words.banned
+}
+if (fexist($apath/etc/words.hi) != -1) {
+    eval load $apath/etc/words.hi
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

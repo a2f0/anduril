@@ -1,0 +1,32 @@
+# formats for type box and slaves box_header box_side box_footer box_bottom 
+ac.format.add                  box 
+ac.format.add           box_header [@header@]:
+ac.format.add             box_side @data@
+ac.format.add           box_footer [@footer@]
+ac.format.add           box_bottom 
+
+ac.format.add                  box $(dcol2).--$(col2)---- $(hcol2)--$(col2)---$(hcol2)------ $(col2)- $(hcol2)---$(col2)--$(hcol2)----------$(col2)----$(dcol2)-- $(col2)-- $(dcol2)-$(col2)
+ac.format.add           box_header $(dcol2).--$(col2)---- $(hcol2)--$(col2)---$(hcol2)------ $(col2)- $(hcol2)---$(col2)--$(hcol2)-[%n@header@$(hcol2)]---------$(col2)----$(dcol2)-- $(col2)-- $(dcol2)-$(col2)
+ac.format.add             box_side $(dcol2)|%n @data@
+ac.format.add           box_footer $(dcol2)`-$(col2)ÄÄ Ä$(hcol2)---$(col2)--$(hcol2)----------$(col2)-- -$(hcol2)- -[%n@footer@$(hcol2)]---$(col2)Ä$(hcol2)-----$(col2)----$(dcol2)- $(col2)--$(dcol2)- -
+ac.format.add           box_bottom $(dcol2)`-$(col2)-- -$(hcol2)---$(col2)--$(hcol2)----------$(col2)-- -$(hcol2)- ----$(col2)-$(hcol2)-----$(col2)----$(dcol2)- $(col2)--$(dcol2)- -
+
+ac.format.add                  box $(dcol2)ÚÄÄ$(col2)ÄÄÄÄ $(hcol2)ÄÄ$(col2)ÄÄÄ$(hcol2)ÄÄÄÄÄÄ $(col2)Ä $(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)ÄÄ $(col2)ÄÄ $(dcol2)Ä$(col2)
+ac.format.add           box_header $(dcol2)ÚÄÄ$(col2)ÄÄÄÄ $(hcol2)ÄÄ$(col2)ÄÄÄ$(hcol2)ÄÄÄÄÄÄ $(col2)Ä $(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)Ä[%n@header@$(hcol2)]ÄÄÄÄÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)ÄÄ $(col2)ÄÄ $(dcol2)Ä$(col2)
+ac.format.add             box_side $(dcol2)³%n @data@
+ac.format.add           box_footer $(dcol2)ÀÄ$(col2)ÄÄ Ä$(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄ Ä$(hcol2)Ä Ä[%n@footer@$(hcol2)]ÄÄÄ$(col2)Ä$(hcol2)ÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)Ä $(col2)ÄÄ$(dcol2)Ä Ä
+ac.format.add           box_bottom $(dcol2)ÀÄ$(col2)ÄÄ Ä$(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄ Ä$(hcol2)Ä ÄÄÄÄ$(col2)Ä$(hcol2)ÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)Ä $(col2)ÄÄ$(dcol2)Ä Ä
+
+ac.format.add                  box  $(dcol2)ÚÄÄ$(col2)ÄÄÄÄ $(hcol2)ÄÄ$(col2)ÄÄÄ$(hcol2)ÄÄÄÄÄÄ $(col2)Ä $(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)ÄÄ $(col2)ÄÄ $(dcol2)Ä$(col2)
+ac.format.add           box_header  $(dcol2)ÚÄÄ$(col2)ÄÄÄÄ $(hcol2)ÄÄ$(col2)ÄÄÄ$(hcol2)ÄÄÄÄÄÄ $(col2)Ä $(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)Ä[%n@header@$(hcol2)]ÄÄÄÄÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)ÄÄ $(col2)ÄÄ $(dcol2)Ä$(col2)
+ac.format.add             box_side $(hcol2)[$(dcol2)³$(hcol2)]%n @data@
+ac.format.add           box_footer  $(dcol2)ÀÄ$(col2)ÄÄ Ä$(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄ Ä$(hcol2)Ä Ä[%n@footer@$(hcol2)]ÄÄÄ$(col2)Ä$(hcol2)ÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)Ä $(col2)ÄÄ$(dcol2)Ä Ä
+ac.format.add           box_bottom  $(dcol2)ÀÄ$(col2)ÄÄ Ä$(hcol2)ÄÄÄ$(col2)ÄÄ$(hcol2)ÄÄÄÄÄÄÄÄÄÄ$(col2)ÄÄ Ä$(hcol2)Ä ÄÄÄÄ$(col2)Ä$(hcol2)ÄÄÄÄÄ$(col2)ÄÄÄÄ$(dcol2)Ä $(col2)ÄÄ$(dcol2)Ä Ä
+
+ac.format.add                  box $(hcol2)ÚÄÄ$(col2)-$(hcol2)ÄÄÄ $(col2)Ä$(hcol2)-$(col2)$repeat(${rand(5) + 1} -)$(hcol2)Ä$(col2)- ÄÄ$(dcol2)-$(col2)ÄÄÄ$(hcol2)ÄÄ$(col2)-$(dcol2)-$(col2)$repeat(${rand(10) + 5} Ä)$(dcol2)-$(col2)Ä $(dcol2)Ä$(col2)Ä -
+ac.format.add           box_header $(hcol2)ÚÄÄ$(col2)-$(hcol2)ÄÄÄ $(col2)Ä$(hcol2)-$(col2)$repeat(${rand(5) + 1} -)$(hcol2)Ä$(col2)- ÄÄ$(dcol2)-$(col2)ÄÄÄ$(hcol2)ÄÄ$(col2)-$(dcol2)-$(hcol2)\(%n@header@$(hcol2)\)$(dcol2)-$(col2)Ä $(dcol2)Ä$(col2)Ä -
+ac.format.add             box_side $(col2)³%n @data@
+ac.format.add           box_footer $(dcol2)ÀÄÄ$(col2)-$(hcol2)ÄÄÄ $(col2)Ä$(hcol2)-$(col2)$repeat(${rand(4) + 1} -) $(hcol2)\(%n@footer@$(hcol2)\) $(dcol2)-$(col2)ÄÄ $(dcol2)Ä$(col2)Ä -
+ac.format.add           box_bottom 
+# ---
+

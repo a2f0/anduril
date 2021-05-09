@@ -1,0 +1,5 @@
+@a.completion.add(msg %[,]N,c %*)
+@a.completion.alias(msg m)
+
+@a.completion.add(notice %[,]N,c %*)
+@a.completion.alias(notice n)

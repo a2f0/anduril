@@ -1,0 +1,33 @@
+### $Id: color.am,v 1.13 2001/11/03 10:25:51 wd Exp $
+
+:new module color
+:mod color version 26
+:mod color desc module for fiddling with script-wide colorsets
+:mod color author wd@anduril.org White_Dragon Chip Norkus
+:mod color depend box list formats
+
+### this isn't even a real format, it simply makes a good placeholder
+
+:new format color placeholder for the color pairings
+:form color flags i
+:form color display_command a.color.color_display
+:form color list_command a.color.color_list
+:form color set_command a.color.color_set
+
+### quick and dirty alias to make the blocks for the color output
+mstub a.color.color_list
+mstub a.color.color_set
+mstub a.color.color_display
+
+### and a command thing
+
+:new command color [#] [format <name> <value>]
+:comm color desc list colors, or choose a color setting
+:comm color aliases colors colour colours
+:comm color xref comm:format
+:comm color help \
+this command acts as a wrapper for /flist color and /format color, and also \
+allows you to give a format static colors (until the format is changed).
+mstub color
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

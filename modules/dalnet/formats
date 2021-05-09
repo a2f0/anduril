@@ -1,0 +1,8 @@
+# formats for type services_send
+ac.format.add        services_send $(dcol2)\($(hcol2)@service@$(dcol2)) $(hcol1)->$(ncol) @msg@
+# ---
+
+# formats for type services_recv
+ac.format.add        services_recv $(dcol2)\($(hcol2)@service@$(dcol2))$(ncol) @msg@
+# ---
+

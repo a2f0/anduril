@@ -1,0 +1,108 @@
+### $Id: scan.am,v 1.24 2002/09/29 22:37:10 wd Exp $
+
+:new module scan
+:mod scan version 41
+:mod scan desc provides various channel-scanning utilities
+:mod scan author wd@anduril.org White_Dragon Chip Norkus
+:mod scan depend usage list
+
+:new command names [-v] [-all|#channel]
+:comm names aliases sc scan
+:comm names desc provides a nice looking summary of a channel's occupants
+:comm names xref form:scan comm:clones conf:scan_longest_nick \
+conf:scan_sort_list conf:scan_on_join
+:comm names help \
+this command gives a nicely formatted list of users in the specified \
+channel (if specified) or all channels with the -all switch, or the \
+current channel if nothing is specified note that if you postfix the \
+command with o it will scan only for ops, with v it will scan only for \
+voices (+), with n it will scan only for normal users.  if the -v flag \
+is given, a long listing (something like /who) of the users will be \
+displayed.
+
+:new format scan individual nickname display format of scan
+:form scan flags i
+:form scan arguments @nick@
+:form scan display_command a.scan.display
+:form scan xref comm:scan
+
+alias a.scan.display (format, number) {
+    a.scan 0 * #anduril crystlize jade .+john maloy @.raven @.wd
+}
+
+mstub names
+
+alias sco nameso
+alias scano nameso
+mstub nameso
+
+alias scv namesv
+alias scanv namesv
+mstub namesv
+
+alias scn namesn
+alias scann namesn
+mstub namesn
+
+alias scf namesf
+alias scanf namesf
+mstub namesf
+
+# bx compat stuff
+alias chops scano -v $*
+alias nonops scann -v $*
+alias users scan -v $*
+
+mstub a.scan
+
+^eval on #-join -$ac.hash(scan) '$$servernick() % *' {
+	^on ^353 "% % $1 *" #
+	^on ^366 "% $1 *" {
+		^on 353 -"% % $1 *"
+		^on 366 -"% $1 *"
+		if (ac.config(scan_on_join)) {
+			names $1
+		}
+	}
+}
+
+:new command clones [-uh] [#channel]
+:comm clones desc checks for clones in a channel
+:comm clones xref comm:scan
+:comm clones help \
+this command scans a channel for clones.  by default it looks only for \
+clients on the same host, but this can be modified with the -uh flags. \
+if -u is specified, it will look for clients with the same username. \
+if -h is specified, it will look for clients with the same hostname \
+(the default behavior is /clones -h).  If you use /clones -uh ... it \
+will look for clients with the same user@host.
+mstub clones
+
+:new config scan_longest_nick the longest nick scan will display fully
+:conf scan_longest_nick value 15
+:conf scan_longest_nick flags nt
+:conf scan_longest_nick xref comm:scan
+:conf scan_longest_nick help \
+this determines the longest nick that will be shown in a /scan without \
+truncating the nick.  If a nickname is truncated it actually loses two \
+characters which are replaced by '..' to indicate that is not the full nick.
+
+:new config scan_sort_list sort the scan list 
+:conf scan_sort_list value 0
+:conf scan_sort_list flags bt
+:conf scan_sort_list xref comm:scan
+:conf scan_sort_list help \
+this determines whether the list of names in /scan is sorted by channel \
+status.  By default, /scan is simply alphabetically sorted.  With this \
+config turned on, the /scan is further sorted down into an alphabetical \
+list of ops, then alphabetical voices, then alphabetical normal users.
+
+:new config scan_on_join perform a /scan on join?
+:conf scan_on_join value 1
+:conf scan_on_join flags b
+:conf scan_on_join xref comm:scan
+:conf scan_on_join help \
+this determines whether or not a /scan will be issued after the client has \
+joined a channel and received the /names list.
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

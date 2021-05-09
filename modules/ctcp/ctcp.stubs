@@ -1,0 +1,42 @@
+### $Id: ctcp.stubs,v 1.8 2002/04/23 08:39:02 wd Exp $
+ac.package ctcp
+
+alias ctcp (to, cmd, args) {
+    if (cmd == []) {
+	@usage(ctcp)
+    } else {
+	if (cmd == [ping] && args == []) {
+	    @:args = utime()
+	}
+	//ctcp $to $cmd $args
+    }
+}
+
+alias a.ctcp.version (type, target) {
+    if (target == []) {
+	switch ($type) {
+	    (ver) {
+		ctcp $builtin_expando(T) version
+	    }
+	    (version) {
+		//version
+	    }
+	}
+    } else {
+	if (index(. $target) == -1) {
+	    ctcp $target version
+	} else {
+	    //version $target
+	}
+    }
+}
+
+alias ping {
+    if (![$0]) {
+	//ping $builtin_expando(T)
+    } else {
+	//ping $0
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

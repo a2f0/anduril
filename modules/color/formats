@@ -1,0 +1,53 @@
+# formats for type color
+ac.format.add                color %w %W %K %w %W %K
+ac.format.add                color %w %W %K %r %R %K
+ac.format.add                color %w %W %K %g %G %K
+ac.format.add                color %w %W %K %y %Y %K
+ac.format.add                color %w %W %K %b %B %K
+ac.format.add                color %w %W %K %m %M %K
+ac.format.add                color %w %W %K %c %C %K
+ac.format.add                color %r %R %K %w %W %K
+ac.format.add                color %r %R %K %r %R %K
+ac.format.add                color %r %R %K %g %G %K
+ac.format.add                color %r %R %K %y %Y %K
+ac.format.add                color %r %R %K %b %B %K
+ac.format.add                color %r %R %K %m %M %K
+ac.format.add                color %r %R %K %c %C %K
+ac.format.add                color %g %G %K %w %W %K
+ac.format.add                color %g %G %K %r %R %K
+ac.format.add                color %g %G %K %g %G %K
+ac.format.add                color %g %G %K %y %Y %K
+ac.format.add                color %g %G %K %b %B %K
+ac.format.add                color %g %G %K %m %M %K
+ac.format.add                color %g %G %K %c %C %K
+ac.format.add                color %y %Y %K %w %W %K
+ac.format.add                color %y %Y %K %r %R %K
+ac.format.add                color %y %Y %K %g %G %K
+ac.format.add                color %y %Y %K %y %Y %K
+ac.format.add                color %y %Y %K %b %B %K
+ac.format.add                color %y %Y %K %m %M %K
+ac.format.add                color %y %Y %K %c %C %K
+ac.format.add                color %b %B %K %w %W %K
+ac.format.add                color %b %B %K %r %R %K
+ac.format.add                color %b %B %K %g %G %K
+ac.format.add                color %b %B %K %y %Y %K
+ac.format.add                color %b %B %K %b %B %K
+ac.format.add                color %b %B %K %m %M %K
+ac.format.add                color %b %B %K %c %C %K
+ac.format.add                color %m %M %K %w %W %K
+ac.format.add                color %m %M %K %r %R %K
+ac.format.add                color %m %M %K %g %G %K
+ac.format.add                color %m %M %K %y %Y %K
+ac.format.add                color %m %M %K %b %B %K
+ac.format.add                color %m %M %K %m %M %K
+ac.format.add                color %m %M %K %c %C %K
+ac.format.add                color %c %C %K %w %W %K
+ac.format.add                color %c %C %K %r %R %K
+ac.format.add                color %c %C %K %g %G %K
+ac.format.add                color %c %C %K %y %Y %K
+ac.format.add                color %c %C %K %b %B %K
+ac.format.add                color %c %C %K %m %M %K
+ac.format.add                color %c %C %K %c %C %K
+ac.format.add                color %w  %w %w  %w
+# ---
+

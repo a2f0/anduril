@@ -1,0 +1,170 @@
+### $Id: util.am,v 1.21 2001/09/23 11:01:16 wd Exp $
+
+:new module util
+:mod util version 21
+:mod util desc various script/user utilities (think miscellany)
+:mod util author wd@anduril.org White_Dragon Chip Norkus
+
+### read in countries db
+alias a.load_countries {
+	@:fd=open($apath/share/countries R)
+	if (fd > -1) {
+		while (!eof($fd)) {
+			@:s=read($fd)
+			@a.countries[$word(0 $s)]=restw(1 $s)
+		}
+		@close($fd)
+	}
+}
+
+alias a.country {
+	if (index(. $0) != -1) {
+		@:c=a.countries[$after(-1 . $0)]
+	}{
+		@:c=a.countries[$0]
+	}
+	if (!c) {
+		return unknown
+	}
+	return $c
+}
+
+:new command country <host>
+:comm country desc looks up a country code
+:comm country help \
+the /country command simply looks up the country corresponding to a TLD, \
+and lets you know what it is, or that it doesn't exist
+
+alias country {
+	if (![$0]) {
+		@usage(country)
+		return
+	}
+
+	@:c=a.country($0)
+	if (c!=[unknown]) {
+		aecho host $0 resides in $c
+	}{
+		aecho could not find country for host $0
+	}
+}
+
+a.load_countries
+
+### gnuh(arg nick!user@host)
+### where arg is any combination of n (nick), u (user), h (host)
+### returns the requested information from the mask
+
+alias gnuh {
+	if (![$1]) {
+		return
+	}
+	if (pass(n $0)) {
+		@:s=[$before(! $1)!]
+	}
+	if (pass(u $0)) {
+		@:s#=[$after(! $before(-1 @ $1))@]
+	}
+	if (pass(h $0)) {
+		@:s#=after(-1 @ $1)
+	}
+	
+	switch ($right(1 $s)) {
+		(@) (!) {
+			return $chop(1 $s)
+		}
+		(*) {
+			return $s
+		}
+	}
+}
+
+### commonchans(nick)
+### returns a list of channels you share with specified nick, or nothing
+### if none are shared.
+
+alias commonchans {
+	if (![$0]) {
+		return
+	}
+	
+	fe ($mychannels()) xx {
+		if (onchannel($0 $xx)) {
+			@:s#=[$xx,]
+		}
+	}
+	return $before(-1 , $s)
+}
+
+### ismask(string)
+### returns 1 if the string is a mask (has * or ? in it)
+### or 0 if it is not.
+
+alias ismask {
+	if (index(* $*)!=[-1]) {
+		return 1
+	}
+	if (index(? $*)!=[-1]) {
+		return 1
+	}
+	return 0
+}
+
+### chan_fixname(word)
+### returns the word if it starts with a #, &, or +
+### or the word preceded with a # otherwise
+
+alias a.chan_fixname {
+	switch ($left(1 $0)) {
+		(#) (&) (+) {
+			return $0
+		}
+		(*) {
+			return #$0
+		}
+	}
+}
+
+:new command umode
+:comm umode desc change user mode
+:comm umode help all it does is change your user mode, really!
+
+alias umode //mode $servernick() $*
+
+:new command nslookup <hostname|IP|user>
+:comm nslookup desc resolve a host->IP or IP->host
+:comm nslookup aliases dns
+:comm nslookup help \
+this command performs a lookup on the specified IP, or hostname, or the \
+hostname/IP of the specified user if they are on IRC.
+
+alias nslookup {
+	if (![$0]) {
+		@usage(nslookup)
+		return
+	}
+	
+	if (index(. $0)!=-1) {
+		@:addr=convert($0)
+		if (!addr) {
+			aerrecho could not resolve $0
+		}{
+			aecho $0 resolves to $addr
+		}
+	}{
+		userhost $0 -cmd {
+			if ([$4]==[<UNKNOWN>]) {
+				aerrecho user $0 is not online
+			}{
+				@:addr=convert($4)
+				if (!addr) {
+					aerrecho could not resolve $4 \($0\[$4\]\)
+				}{
+					aecho $4 resolves to $convert($4) \($0\[$4\]\)
+				}
+			}
+		}
+	}
+}
+
+# vim: syntax=off ts=3 ai smartindent

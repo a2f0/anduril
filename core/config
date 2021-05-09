@@ -1,0 +1,91 @@
+#############################################################################
+### $Id: config,v 1.3 2001/10/28 10:11:48 wd Exp $
+###
+### config related support
+ac.package
+
+###
+### ac.config.find(name)
+### returns the name of the config if it exists as sent exactly, or all
+### configs that begin with the given string
+###
+
+alias ac.config.find (conf) {
+    if (configs[$conf][name]) {
+	return $configs[$conf][name]
+    } elsif (index(* $conf)==[-1] && index(? $conf)==[-1]) {
+	return $pattern($conf\* $ac.config.list)
+    } else {
+	return $pattern($conf $ac.config.list)
+    }
+}
+
+###
+### ac.config.set(confname args)
+### sets the value of variable confname in module to args, does basic
+### typechecking.  If all is well, returns 1, otherwise 0.
+###
+
+alias ac.config.set (conf, value) {
+    if (ac.config.find($conf) == []) {
+	return 0
+    }
+
+    ### preserve old value
+    @:ov = ac.config($conf)
+
+    ### a null entry for words or strings is not erroenous
+    if (pass(ws $configs[$conf][flags]) == [] && [$value] == []) {
+	return 0
+    }
+	
+    if (index(b $configs[$conf][flags]) != -1) {
+	if (value == [on] || left(1 $value) == [y] || value == 1) {
+	    @configs[$conf][value] = 1
+	} elsif (value == [off] || left(1 $value) == [n] || value == 0) {
+	    @configs[$conf][value] = 0
+	} else {
+	    aerrecho invalid argument for boolean config $conf \($value\)
+	    return 0
+	}
+    } elsif (index(n $configs[$conf][flags]) != -1) {
+	if (index(x $configs[$conf][flags]) != -1 && isnumber($value b16)) {
+	    @configs[$conf][value] = value
+	} elsif (index(o $config[$conf][flags]) != -1 && isnumber($value b8)) {
+	    @configs[$conf][value] = value
+	} elsif (isnumber($value b10)) {
+	    @configs[$conf][value] = value
+	} else {
+	    aerrecho invalid argument for decimal number config $conf \($value\)
+	    return 0
+	}
+    } elsif (index(w $configs[$conf][flags]) != -1) {
+	if (word(1 $value) == []) {
+	    @configs[$conf][value] = value
+	} else {
+	    aerrecho invalid argument for one-word config $conf \($value\)
+	    return 0
+	}
+    } else {
+	@configs[$conf][value] = value
+    }
+
+    if (index(e $configs[$conf][flags]) != -1) {
+	eval //^assign configs[$conf][value] $configs[$conf][value]
+    }
+    if (configs[$conf][change_cmd]) {
+	$(configs[$conf][change_cmd]) $conf $ov
+    }
+    return 1
+}
+
+###
+### ac.config(confname)
+###
+
+alias ac.config (conf) {
+    return $configs[$conf][value]
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

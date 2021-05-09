@@ -1,0 +1,6 @@
+# this is just a placeholder file to store changing cvs version data without
+# forcing updates.
+ac.package
+
+# version stuff, this determines build id things
+@ac.version = [39]

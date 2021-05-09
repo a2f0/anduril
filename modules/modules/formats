@@ -1,0 +1,9 @@
+# formats for type load_module
+ac.format.add          load_module loaded module $(hcol1)@name@ $(dcol1)\($(col1)@version@$(dcol1))%n by $(hcol1)@nick@ $(ncol)in $(col1)@loadtime@
+ac.format.add          load_module loaded module $(hcol1)@name@ $(dcol1)\($(col1)@version@$(dcol1))%n by $(hcol1)@nick@ $(dcol1)\(%n@author@ $(dcol1)<$(col1)@email@>$(dcol1)) $(dcol1)\($(hcol1)@comms@%n ${[@comms@] != 1 ? [commands] : [command]}$(dcol1), $(hcol1)@confs@%n ${[@confs@] != 1 ? [configs] : [config]}$(dcol1), $(hcol1)@forms@%n ${[@forms@] != 1 ? [formats] : [format]} loaded$(dcol1))
+# ---
+
+# formats for type unload_module
+ac.format.add        unload_module unloaded module $(hcol1)@name@
+# ---
+

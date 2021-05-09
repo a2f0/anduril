@@ -1,0 +1,45 @@
+# formats for type msg and slaves send_msg
+ac.format.add                  msg *@nick@* @message@
+ac.format.add             send_msg *@nick@*> @message@
+
+ac.format.add                  msg $(hcol2)*$(col2)@nick@$(hcol2)*%n @message@
+ac.format.add             send_msg $(hcol2)*$(col2)@nick@$(hcol2)*>%n @message@
+
+ac.format.add                  msg $(dcol2)\($(hcol2)@nick@$(dcol2)!$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2))%n @message@
+ac.format.add             send_msg $(dcol2)\($(hcol2)@nick@$(dcol2))%n @message@
+
+ac.format.add                  msg $(dcol2)[$(col2)msg$(dcol2).$(hcol2)@nick@$(dcol2)\($(ncol)@user@$(dcol2)@$(ncol)@host@$(dcol2))]$(ncol) @message@
+ac.format.add             send_msg $(dcol2)[$(hcol2)@nick@$(dcol2)]$(ncol) @message@
+
+ac.format.add                  msg $(col2)*$(hcol2)@nick@$(col2)*$(ncol) @message@ $(dcol2)[$(col2)@user@$(dcol2)@$(col2)@host@$(dcol2)]
+ac.format.add             send_msg $(col2)*$(hcol2)@nick@$(col2)*>$(ncol) @message@
+
+ac.format.add                  msg $(hcol1)<<< $(dcol2)[$(hcol2)@nick@$(dcol2)!$(ncol)@user@$(dcol2)@$(ncol)@host@$(dcol2)]$(ncol) @message@
+ac.format.add             send_msg $(hcol1)>>> $(dcol2)[$(hcol2)@nick@$(dcol2)]$(ncol) @message@
+
+ac.format.add                  msg [@nick@!@user@@@host@ @message@
+ac.format.add             send_msg -> [@nick@] @message@
+# ---
+
+# formats for type maction and slaves send_maction
+ac.format.add              maction *> @nick@ @message@
+ac.format.add         send_maction *> *@to@* *> @message@
+
+ac.format.add              maction $(hcol2)*>$(col2) @nick@%n @message@
+ac.format.add         send_maction $(hcol2)*>$(col2) @to@ $(hcol2)*>%n @message@
+
+ac.format.add              maction $(hcol2)*> $(dcol2)\($(hcol2)@nick@$(dcol2))%n @message@
+ac.format.add         send_maction $(hcol2)*> $(dcol2)\($(hcol2)@to@$(dcol2)) $(hcol2)*>%n @message@
+# ---
+
+# formats for type notice and slaves send_notice
+ac.format.add               notice $(dcol1)-$(col1)@nick@$(dcol1)-%n @message@
+ac.format.add          send_notice $(dcol1)-$(col1)@nick@$(dcol1)->%n @message@
+
+ac.format.add               notice $(dcol1)-$(hcol1)@nick@$(dcol1)\($(col1)@user@$(dcol1)@$(col1)@host@$(dcol1))-%n @message@
+ac.format.add          send_notice $(dcol1)-$(hcol1)@nick@$(dcol1)-%n @message@
+
+ac.format.add               notice -@nick@-%n @message@
+ac.format.add          send_notice -> -@nick@-%n @message@
+# ---
+

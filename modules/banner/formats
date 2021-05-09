@@ -1,0 +1,22 @@
+# formats for type banner
+ac.format.add               banner ***
+ac.format.add               banner ***
+ac.format.add               banner $(dcol2)[$(hcol2)a$(dcol2)]%n
+ac.format.add               banner $(dcol2)*$(hcol2)>$(dcol2)*%n
+ac.format.add               banner $(dcol2)[$(hcol2)‘$(dcol2)]%n
+ac.format.add               banner $(dcol2)[$(hcol2)à$(dcol2)]%n
+ac.format.add               banner $(dcol2)>$(col2)>$(hcol2)>%n
+ac.format.add               banner $(dcol2).$(col2).$(hcol2).%n
+ac.format.add               banner $(dcol2)[$(col2)###$(dcol2)]%n
+ac.format.add               banner $(dcol2)þ$(col2)þ$(hcol2)þ%n
+ac.format.add               banner $(col2)-$(hcol2)Ä$(col2)-%n
+ac.format.add               banner $(col2)ì$(hcol1)a$(col2)ì%n
+ac.format.add               banner $(hcol2)\\$(col2)ð$(hcol2)\\%n
+ac.format.add               banner $(dcol2)#$(col2)!$(dcol2)#%n
+# ---
+
+# formats for type banner_mod
+ac.format.add           banner_mod [@mod@]
+ac.format.add           banner_mod $(dcol2)[$(hcol2)@mod@$(dcol2)]%n
+# ---
+

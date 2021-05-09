@@ -1,0 +1,758 @@
+### $Id: channel.am,v 1.57 2003/08/26 01:09:14 wd Exp $
+
+:new module channel
+:mod channel version 116
+:mod channel desc module for handing all kinds of channel stuff
+:mod channel author wd@anduril.org White_Dragon Chip Norkus
+:mod channel dep usage util timestamp network log
+:mod channel meta timestamp channel public
+
+### commands
+
+:new command join <#channel[,#channel2,...]>
+:comm join desc joins the specified channels
+:comm join aliases j
+:comm join help \
+this command joins the specified channel(s), that's all.
+
+mstub join
+
+:new command part [#channel[,#channel2,...]] [reason]
+:comm part desc parts the specified channels
+:comm part aliases p
+:comm part help \
+this command parts the specified channel(s), and if the part_msg config \
+is set, it will use that as a part message, otherwise if random_part is \
+set it will use a random part, otherwise no message.
+
+:new config random_part use a random part message?
+:conf random_part value 0
+:conf random_part flags bt
+
+:new config part_msg always use this part message?
+:conf part_msg value
+:conf part_msg flags s
+
+mstub part
+
+:new command cycle [#channel]
+:comm cycle desc quickly parts and then joins the specified channel
+:comm cycle flags i
+:comm cycle aliases
+:comm cycle help \
+this command simply parts and rejoins a channel, very little excitement
+
+mstub cycle
+
+:new command mode [#channel] [modes] [arguments]
+:comm mode desc changes channel modes
+:comm mode help \
+this command changes the mode for the specified channel, or retrieves it \
+if no modes are specified
+
+alias c //mode * $*
+
+mstub mode
+
+:new command op [#channel] <nick> [nick2 nick3 ...]
+:comm op desc ops specified users in a channel
+:comm op aliases o
+:comm op flags @
+:comm op help \
+this command ops the specified user(s) in the specified channel (or the \
+current channel if none is specified)
+
+mstub op
+
+:new command mop [#channel] [filter]
+:comm mop desc mass-ops people in a channel
+:comm mop flags @
+:comm mop help \
+this command mass-ops all people who match the given filter (or 'n *' if \
+none is given) in a given channel (or the current if none is specified). \
+see also: /ahelp filter
+
+mstub mop
+
+:new command deop [#channel] <nick> [nick2 nick3 ...]
+:comm deop desc ops specified users in a channel
+:comm deop aliases do dop
+:comm deop flags @
+:comm deop help \
+this command deops the specified user(s) in the specified channel (or the \
+current channel if none is specified)
+
+mstub deop
+
+:new command mdeop [#channel] [filter]
+:comm mdeop desc mass-deops people in a channel
+:comm mdeop aliases mdop
+:comm mdeop flags @
+:comm mdeop help \
+this command mass-deops all people who match the given filter (or 'n *' \
+if none is given) in a given channel (or the current if none is specified).  \
+see also: /ahelp filter
+
+mstub mdeop
+
+:new command voice [#channel] <nick> [nick2 nick3 ...]
+:comm voice desc voices specified users in a channel
+:comm voice aliases v
+:comm voice flags @
+:comm voice help \
+this command voices the specified user(s) in the specified channel (or \
+the current channel if none is specified)
+
+mstub voice
+
+:new command mvoice [#channel] [filter]
+:comm mvoice desc mass-ops people in a channel
+:comm mvoice flags @
+:comm mvoice help \
+this command mass-voices all people who match the given filter (or 'n *' \
+if none is given) in a given channel (or the current if none is specified).  \
+see also: /ahelp filter
+
+mstub mvoice
+
+:new command devoice [#channel] <nick> [nick2 nick3 ...]
+:comm devoice desc ops specified users in a channel
+:comm devoice aliases dv dvoice
+:comm devoice flags @
+:comm devoice help \
+this command deops the specified user(s) in the specified channel (or the \
+current channel if none is specified)
+
+mstub devoice
+
+:new command mdevoice [#channel] [filter]
+:comm mdevoice desc mass-ops people in a channel
+:comm mdevoice aliases mdv mdevoice
+:comm mdevoice flags @
+:comm mdevoice help \
+this command mass-devoices all people who match the given filter (or 'n \
+*' if none is given) in a given channel (or the current if none is \
+specified).  see also: /ahelp filter
+
+mstub mdevoice
+
+:new command ban [#channel] <nick> [nick2 nick3 ...]
+:comm ban desc bans specified user(s) from a channel
+:comm ban aliases b
+:comm ban flags i@
+:comm ban help \
+this command bans the specified user(s) from the specified channel (or \
+the current channel if none is specified).  See also /config ban_mask (and \
+/man mask)
+
+:new config ban_mask the mask number used for banning
+:conf ban_mask value 3
+:conf ban_mask flags n
+
+:new config ban_time time in minutes to keep bans
+:conf ban_time value 0
+:conf ban_time flags n
+:conf ban_time help \
+this sets a default time (in minutes) to keep your own bans.  to leave bans \
+forever, use the default value (0).  Otherwise, all bans set through the /ban \
+command (and the /bk command) will actually be timed.  To set a permanent ban \
+with this config set to a non-zero value, use /tban 0 ... (or /tbk 0 ...)
+
+:new command tban <time in minutes> [#channel] <nick> [nick2 nick3 ...]
+:comm tban desc sets a timed ban on a user
+:comm tban flags i@
+:comm tban help \
+the tban command behaves exactly like the /ban command, except that it \
+requires a valid time (specified in minutes) as the first argument. see also \
+the /tbk command.
+
+mstub tban
+
+:new command banstat [#channel]
+:comm banstat desc shows the current ban list
+:comm banstat flags @
+:comm banstat aliases bans
+:comm banstat help \
+this command shows a list of the current bans in the channel, as well as \
+who set them and how long ago they were set.
+
+mstub banstat
+
+:new command unban [#channel] [nick|mask|#] [nick2|mask2|# ...]
+:comm unban desc unbans users or masks from a channel
+:comm unban flags i@
+:comm unban aliases ub
+:comm unban help \
+this command unbans the specified user(s) from the specified (or current) \
+channel.  if no users are specified, all bans are removed.  if you specify \
+a number, the number is taken as the ban number in the channel (visible \
+with the /banstat command)
+
+mstub unban
+
+:new command kick [#channel] <nick[,nick2,nick3,...]> [reason]
+:comm kick desc kicks users from a channel
+:comm kick flags i@
+:comm kick aliases k
+:comm kick help \
+this command kicks the specified user(s) from the specified channel, or \
+the current if none is specified.  The reasom, if not provided, will be \
+gotten from the kick_msg config if it is set, or from the file \
+share/reasons/kick if it exists and random_kick is set, or none otherwise.
+
+:new config random_kick use a random kick message?
+:conf random_kick value 1
+:conf random_kick flags bit
+
+:new config kick_msg message always used for kicks
+:conf kick_msg value
+:conf kick_msg flags s
+
+mstub kick
+
+:new command bankick [#channel] <nick1[,nick2,nick3,...]> [reason]
+:comm bankick desc bans and kicks users from a channel
+:comm bankick flags i@
+:comm bankick aliases bk kb
+:comm bankick help \
+this is a combination of the ban and kick commands, that simple, see \
+/ahelp kick for syntax description
+
+mstub bankick
+
+:new command tbk <time in minutes> [#channel] <nick[,nick2,nick3,...]> [reason]
+:comm tbk desc sets a timed ban on a user
+:comm tbk flags i@
+:comm tbk help \
+the tbk command behaves exactly like the /bk command, except that it \
+requires a valid time (specified in minutes) as the first argument. see also \
+the /tban command.
+
+mstub tbk
+
+:new command invite <user> [#channel]
+:comm invite desc invites a user to a channel
+:comm invite flags @
+:comm invite aliases i
+:comm invite help \
+invites the specified user to the specified channel, or current channel \
+if none is specified.
+
+mstub invite
+
+^bind ^K parse_command {
+	if (a.channel.invites) {
+		xquote -s $pop(a.channel.invites) join $pop(a.channel.invites)
+	} else {
+		aerrecho no channels to join!
+	}
+}
+
+^bind ^[k parse_command {
+	aecho pending invites:
+	fe ($a.channel.invites) xx yy {
+		aecho $xx \(on $yy\)
+	}
+}
+
+^eval on ^invite "*" {
+	@push(a.channel.invites $1)
+	@push(a.channel.invites $servernum($builtin_expando(S)))
+	aecho invite to $1 from $0\($2\).  press ^K to join
+}
+
+:new command wall <message>
+:comm wall desc sends a message to all ops in a channel
+:comm wall flags i@
+:comm wall aliases onotice ovwall vwall
+:comm wall help \
+this command sends a notice to all ops in your current channel with the \
+specified text, encased in the 'wall' format.  if you call the command as \
+'ovwall' or 'vwall' it will send the message to ops+voices, or voices only, \
+respectively.
+
+:new format wall format used for channel wall messages
+:form wall flags i
+:form wall arguments @chan@ @msg@
+
+alias ovwall {
+	 @a.channel.wall = [ov]
+	 a.channel.wall $*
+}
+alias vwall {
+	 @a.channel.wall = [v]
+	 a.channel.wall $*
+}
+alias wall {
+	 @a.channel.wall = [o]
+	 a.channel.wall $*
+}
+mstub a.channel.wall
+
+:new command topic [#channel] [topic]
+:comm topic desc sets or checks the topic of a channel 
+:comm topic aliases t
+:comm topic help \
+this command sets the topic in the specified channel (or current if none \
+is specified) to whatever you give it, or queries the server as to what \
+the topic is if none is set.
+
+mstub topic
+
+:new command ame <message>
+:comm ame desc sends an action to all channels
+:comm ame help \
+this command sends an action (like /me) to all current channels, this is \
+useful for saying something globally (like you're logging off, for \
+instance)
+
+mstub ame
+
+:new command asay <message>
+:comm asay desc sends a message to all channels
+:comm asay help \
+this command sends a message to all current channels, this is useful for \
+saying something globally (like you lick goats, maybe)
+
+mstub asay
+
+### filter stuff, for filterkick, it behaves in the following manner:
+### you pass it a channel (from which the list of users to filter is gotten),
+### and then a string containing characters which look something like a /mode
+### with + indicating positive, and optional arguments, whee.
+
+:new command filterkick [#channel] <flags> [args]
+:comm filterkick aliases fk
+:comm filterkick flags @i
+:comm filterkick help \
+this kicks all the users on a specified channel (or the current) who match \
+the given criteria.  for the format of the filter string, see /ahelp \
+filter
+
+mstub filterkick
+
+:new command filter [#channel] <flags> [args]
+:comm filter help \
+this command just echos out a list of people who would match a filter for \
+a channel, this lets you test before you do something like, say, /fk :) \
+this is also meta-data for the channel filter system, flags are as \
+follows: %n\
+ - *: matches any user who is opered %n\
+ - a: matches any user who is away %n\
+ - g: matches ircnames (this should be the last flag you use!) %n\
+ - h: matches hostname %n\
+ - m: matches mask (nick!user@host) %n\
+ - n: matches nick %n\
+ - o: matches any user who is opped (no argument) %n\
+ - s: matches server %n\
+ - u: matches username %n\
+ - v: matches any user who is voiced (no argument) %n\
+each one of these flags requires an argument (unless it says otherwise), \
+all of the flags use only one word EXCEPT for the g flag which takes the \
+entire line that hasn't been taken by any other arguments. also, \
+optionally, a - flag can be passed which makes everything after it \
+evaluate for things which do NOT match the given arguments.  examples \
+follow:  /filter #wd ms *!*@*.linux.com freei.* %n\
+shows all users in #wd who have masks which match 'linux.com' and are on \
+a server that matches freei.* %n\
+/fk n-s *acire* barovia.* %n\
+will kick all users on the current channel whose nicks match '*acire*' \
+who are not on a server matching 'barovia.*'
+
+mstub filter
+
+### public receipt formats (lots)
+mstub a.channel.align,a.channel.align.off
+
+:new format public text displayed when public (channel) messages are received
+:form public slaves public_other
+:form public flags i
+:form public arguments @nick@ @channel@ @msg@
+
+^on ^public "*" {
+	if (ac.config(show_ops_in_msgs)) {
+		@:n = [${ischanop($0 $1) ? [@] : ischanvoice($0 $1) ? [+] : []}] ## [$0]
+	} else {
+		@:n = [$0]
+	}
+	if (ac.module.find(words)) {
+		 @:text = a.words.hook(public $n $1-)
+	} else {
+		 @:text = [$2-]
+	}
+	@a.channel.align($n $1)
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(public)$a.channel.align.left$fparse(public $n $1 $a.channel.align.right$text)
+	@a.channel.align.off()
+	@a.channel.log($1 $fparse(public $n $1-))
+}
+
+:new format public_other displayed when a message is received for a non-active channel
+:form public_other flags %
+:form public_other arguments @nick@ @channel@ @msg@
+
+^on ^public_other "*" {
+	if (ac.config(show_ops_in_msgs)) {
+		@:n = [${ischanop($0 $1) ? [@] : ischanvoice($0 $1) ? [+] : []}] ## [$0]
+	} else {
+		@:n = [$0]
+	}
+	if (ac.module.find(words)) {
+		 @:text = a.words.hook(public $n $1-)
+	} else {
+		 @:text = [$2-]
+	}
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(public)$fparse(public_other $n $1 $text)
+	@a.channel.log($1 $fparse(public $n $1-))
+}
+
+:new format send_public displayed when you send a message to the current channel
+:form send_public slaves send_public_other
+:form send_public flags i
+:form send_public arguments @nick@ @channel@ @msg@
+
+:new format send_public_other displayed when you send a message to a non-current channel
+:form send_public_other flags %
+:form send_public_other arguments @nick@ @channel@ @msg@
+
+^on ^send_public "*" {
+	if (ac.config(show_ops_in_msgs)) {
+		@:n = [${ischanop($servernick() $0) ? [@] : ischanvoice($servernick() $0) ? [+] : []}] ## builtin_expando(N)
+	} else {
+		@:n = [$servernick()]
+	}
+	@:w = winchan($0 $builtin_expando(S))
+	if ([$0] == chanwin($w) || w == -1) {
+		@a.channel.align($n $0)
+		xecho -window $w $a.timestamp(public)$a.channel.align.left$fparse(send_public $n $0 $a.channel.align.right$1-)
+		@a.channel.align.off()
+	} else {
+		xecho -window $w $a.timestamp(public)$fparse(send_public_other $n $*)
+	}
+	@a.channel.log($0 $fparse(send_public $n $*))
+}
+
+:new format action displayed when a channel action is sent to the current channel
+:form action slaves action_other
+:form action flags i
+:form action arguments @nick@ @channel@ @msg@
+
+:new format action_other displayed when a channel action is sent to a non-current channel
+:form action_other flags %
+:form action_other arguments @nick@ @channel@ @msg@
+
+:new format send_action displayed when you send an action to the current channel
+:form send_action slaves send_action_other
+:form send_action flags i
+:form send_action arguments @nick@ @channel@ @msg@
+
+:new format send_action_other displayed when you send an action to a non-current channel
+:form send_action_other flags %
+:form send_action_other arguments @nick@ @channel@ @msg@
+
+### we do it this way for preciseness and to avoid conflicts with the /on
+### in the msg module
+^on ^action "% #% *" a.chan_disp_action $*
+^on ^action "% +% *" a.chan_disp_action $*
+^on ^action "% &% *" a.chan_disp_action $*
+
+^on ^send_action "#% *" a.chan_disp_send_action $*
+^on ^send_action "+% *" a.chan_disp_send_action $*
+^on ^send_action "&% *" a.chan_disp_send_action $*
+
+alias a.chan_disp_action {
+	@:w = winchan($1 $builtin_expando(S))
+	if (ac.module.find(words)) {
+		 @:text = a.words.hook(action $*)
+	} else {
+		 @:text = [$2-]
+	}
+	if ([$1] == chanwin($w)) {
+		xecho -window $w $a.timestamp(public)$fparse(action $0 $1 $text)
+	} else {
+		xecho -window $w $a.timestamp(public)$fparse(action_other $0 $1 $text)
+	}
+	@a.channel.log($1 $fparse(action $*))
+}
+
+alias a.chan_disp_send_action {
+	@:w = winchan($0 $builtin_expando(S))
+	if ([$0] == chanwin($w) || w == -1) {
+		xecho -window $w $a.timestamp(public)$fparse(send_action $servernick() $*)
+	} else {
+		xecho -window $w $a.timestamp(public)$fparse(send_action_other $servernick() $*)
+	}
+	@a.channel.log($0 $fparse(send_action $servernick() $*))
+}
+
+:new format public_msg displayed when a message is received from someone outside a channel
+:form public_msg arguments @nick@ @channel@ @msg@
+
+^on ^public_msg "*" {
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(public)$fparse(public_msg $*)
+	@a.channel.log($1 $fparse(public_msg $*))
+}
+
+:new format public_notice displayed when a notice is receied for a channel
+:form public_notice arguments @nick@ @channel@ @msg@
+
+^on ^public_notice "*" {
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(public)$fparse(public_notice $*)
+	@a.channel.log($1 $fparse(public_msg $*))
+}
+
+:new format join displayed when a user joins a channel 
+:form join flags i
+:form join arguments @nick@ @user@ @host@ @channel@ @extra@
+
+on ^join "*" {
+	if (ac.config(check_clones_on_join)) {
+		@:host = after(@ $2)
+		@:clones = 0
+		fe ($chanusers($1)) xx {
+			if (after(@ $userhost($xx)) == host) {
+				@:clones++
+			}
+		}
+		if (clones > 1) {
+			@push(a.channel.join.extra clone\($clones\))
+		}
+	}
+	@:s = fparse(join $0 $sar(/@/ /$2) $1 $a.channel.join.extra)
+	//^assign -a.channel.join.extra
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	if ([$0] == builtin_expando(N)) {
+		@:enc = [#] ## urlencode($after(# $1))
+		@a.log.open(channel/$enc\.log autoclear noautoclose)
+		### work around for odd /join behavior..
+		if (chanwin($1) == winnum()) {
+			//^join $1
+		}
+		@:i = findw($1 $a.channel.invites)
+		if (i != -1) { ### knock things off the /invite stack.
+			@a.channel.invites = sar(/$1 $word(${i + 1} $a.channel.invites)//$a.channel.invites)
+		}
+	}
+	@a.channel.log($1 $s)
+}
+
+:new format part displayed when a user parts a channel
+:form part flags i
+:form part arguments @nick@ @user@ @host@ @channel@ @msg@
+
+^on ^leave "*" {
+	@:s = fparse(part $0 $sar(/@/ /$2) $1 $3-))
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($1 $s)
+	### the logger will automatically close the file after a while.
+}
+
+:new format kick displayed when a user is kicked from a channel
+:form kick flags i
+:form kick arguments @channel@ @by@ @kicked@ @msg@
+
+^on ^kick "*" {
+	@:s = fparse(kick $2 $1 $0 $3-)
+	xecho -window $winchan($2 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($2 $s)
+}
+
+:new format cmode displayed when a channel mode is changed (by a user)
+:form cmode slaves smode
+:form cmode flags i
+:form cmode arguments @nick@ @user@ @host@ @channel@ @args@
+
+:new format smode displayed when a channel mode is changed by a server
+:form smode flags %
+:form smode arguments @server@ @channel@ @args@
+
+
+^on ^mode "% #% *" a.chan_disp_mode $*
+^on ^mode "% +% *" a.chan_disp_mode $*
+^on ^mode "% &% *" a.chan_disp_mode $*
+
+alias a.chan_disp_mode {
+	if (index(. $0)==[-1]) {
+		@:s = fparse(cmode $0 $sar(/@/ /$userhost()) $1-)
+	}{
+		@:s = fparse(smode $*)
+	}
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($1 $s)
+}
+
+:new format quit displayed when a user quits
+:form quit arguments @nick@ @user@ @host@ @chans@ @msg@
+:form quit flags i
+
+alias a.chan_one_quit_chng {
+	if ([$0] == 1) {
+		^on ^signoff -"*"
+	} else {
+		^on ^channel_signoff -"*"
+	}
+	
+	if (ac.config(one_quit)) {
+		^on ^signoff "*" {
+			@:c = commonchans($0)
+			@:s = fparse(quit $0 $sar(/@/ /$userhost()) $c $1-)
+			echo $a.timestamp(channel ts b)$s
+			fe ($sar(g/,/ /$c)) xx {
+				@a.channel.log($xx $s)
+			}
+		}
+	} else {
+		^on ^channel_signoff "*" {
+			@:s = fparse(quit $1 $sar(/@/ /$userhost()) $0 $2-)
+			xecho -window $winchan($0 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+			@a.channel.log($0 $s)
+		}
+	}
+}
+
+:new format nick displayed when a user changes nicks
+:form nick arguments @chans@ @from@ @to@
+:form nick flags i
+
+alias a.chan_one_nick_chng {
+	if ([$0]==[1]) {
+		^on ^nickname -"*"
+	} else {
+		^on ^channel_nick -"*"
+	}
+	
+	if (ac.config(one_nick)) {
+		^on ^nickname "*" {
+			@:c = commonchans($0)
+			@:s = fparse(nick $c $*)
+			echo $a.timestamp(channel ts b)$s
+			fe ($sar(g/,/ /$c)) xx {
+				@a.channel.log($xx $s)
+			}
+		}
+	} else {
+		^on ^channel_nick "*" {
+			@:s = fparse(nick $*)
+			xecho -window $winchan($0 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+			@a.channel.log($0 $s)
+		}
+	}
+}
+
+:new format topic displayed when a topic is changed
+:form topic arguments @channel@ @by@ @topic@
+:form topic flags i
+:form topic slaves current_topic
+
+:new format current_topic displayed when a topic is shown
+:form current_topic arguments @channel@ @topic@
+
+^on ^topic "*" {
+	@:s = fparse(topic $1 $0 $2-)
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($1 $s)
+	@topics[$ac.encode($1)]=[$2-]
+}
+
+### RPL_NOTOPIC
+^on ^331 "*" {
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$1
+	@a.channel.log($1 no topic for channel $1)
+	@topics[$ac.encode($1)]=[(no topic)]
+}
+
+### RPL_TOPIC
+^on ^332 "*" {
+	@:s = fparse(current_topic $1-)
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($1 $s)
+	@topics[$ac.encode($1)]=[$2-]
+}
+
+### RPL_TOPICWHOTIME
+^on ^333 "*" {
+	@:s = [topic for $1 set by $2 on $strftime($3 %c) \($tdiff3(${time() - [$3]}) ago\)]
+	xecho -window $winchan($1 $builtin_expando(S)) $a.timestamp(channel ts b)$s
+	@a.channel.log($1 $s)
+}
+
+### logging mechanisms here.
+alias a.channel.log (chan, stuff) {
+	if (ac.config(chan_log)) {
+		@:chan = [#] ## urlencode($after(# $chan))
+		@a.log(channel/$chan\.log $stuff)
+	}
+}
+
+alias a.channel.strip_colors_chng {
+	^on send_to_server -"% % PRIVMSG #% :**"
+	^on send_to_server -"% % PRIVMSG &% :**"
+	^on send_to_server -"% % PRIVMSG +% :**"
+	
+	if (ac.config(strip_color_output)) {
+		^on ^send_to_server "% % PRIVMSG #% :**" {//^quote PRIVMSG $3 $strip("$chr(13)" $stripcrap(ANSI,COLOR $4-))}
+		^on ^send_to_server "% % PRIVMSG &% :**" {//^quote PRIVMSG $3 $strip("$chr(13)" $stripcrap(ANSI,COLOR $4-))}
+		^on ^send_to_server "% % PRIVMSG +% :**" {//^quote PRIVMSG $3 $strip("$chr(13)" $stripcrap(ANSI,COLOR $4-))}
+	}
+}
+
+### configs
+:new config show_ops_in_msgs show the @/+ symbols before people's nicks when they speak in-channel
+:conf show_ops_in_msgs value 0
+:conf show_ops_in_msgs flags bit
+
+:new config one_quit show only one quit for a user who signs off
+:conf one_quit value 0
+:conf one_quit flags bt
+:conf one_quit change_cmd a.chan_one_quit_chng
+
+:new config one_nick show only one line for a user who changes nicks
+:conf one_nick value 0
+:conf one_nick flags bt
+:conf one_nick change_cmd a.chan_one_nick_chng
+
+:new config chan_log log channel activity
+:conf chan_log value 0
+:conf chan_log flags bi
+
+:new config strip_color_output strip all colors output to a channel?
+:conf strip_color_output value 0
+:conf strip_color_output flags bi
+:conf strip_color_output change_cmd a.channel.strip_colors_chng
+
+:new config align_public align the text output of public channels
+:conf align_public value off
+:conf align_public flags wt
+:conf align_public help \
+when this config is set to on (or 'right') nicknames are aligned to the \
+right of (the form normally seen in scripts).  when it is set to 'left', \
+nicknames appear on the left, but text is still aligned in block form on \
+the right.
+
+:new config align_public_min minimum distance to align nicks
+:conf align_public_min value 9
+:conf align_public_min flags nt
+:conf align_public_min help \
+this is the minimum distance to align nicks so that, even if you are in a \
+channel with nicks all shorter than this length, they will all be aligned \
+this distance anyways.  the default is usually fine, however, setting it \
+to a value less than 1 will turn it off.
+
+:new config align_public_max maximum distance to align nicks
+:conf align_public_max value 12
+:conf align_public_max flags nt
+:conf align_public_max help \
+this is the maximum distance to align nicks, any nicks that are longer than \
+this will be allowed to spill over (though the text, if it goes over one \
+line, will align with all other text displayed),  This feature can be turned \
+off (at your own visual peril on DALnet/similars ;) by setting it to a \
+value less than 1.
+
+:new config check_clones_on_join check for clones on join
+:conf check_clones_on_join value 0
+:conf check_clones_on_join flags b
+:conf check_clones_on_join help \
+when set on, this performs a check for clones every time a client joins a \
+channel.  In large channels this might cause your client a little \
+discomfort, use with care.
+
+# vim: syntax=off ts=3 ai smartindent

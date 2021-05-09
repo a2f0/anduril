@@ -1,0 +1,22 @@
+### $Id: grep.am,v 1.12 2001/04/10 05:16:34 wd Exp $
+
+:new module grep
+:mod grep version 17
+:mod grep desc adds [e]grep support to the client, neat
+:mod grep author wd@anduril.org White_Dragon Chip Norkus
+:mod grep depend box usage
+
+:new command grep [-w #] <text>
+:comm grep desc performs a text search on the lastlog of the current/specified window
+:comm grep aliases egrep
+:comm grep flags i
+:comm grep help \
+at the most basic level, /grep searches the lastlog of your current window \
+for the specified text.  with the -w option you can specify the window \
+whose lastlog you want to use.  If a * is specified, all windows will be \
+grepped.  A regular expression of any sort can be used, as well.
+
+mstub grep
+
+# vim: syntax=off ts=3 ai smartindent
+

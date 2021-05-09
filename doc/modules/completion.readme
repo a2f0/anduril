@@ -1,0 +1,87 @@
+### $Id: completion.readme,v 1.4 2002/01/28 07:17:30 wd Exp $
+
+this is (in my opinion) one of the most powerful completion engines out there,
+and it should be relatively simple to use.  to add a command, one simply
+does:
+
+@a.completion.add(<command> <format>)
+
+more on the two requirements here:
+command can be either a single command, or a 'subcommand', i.e. for the dcc 
+commands:
+@a.completion.add(dcc send <stuff>)
+@a.completion.add(dcc get <stuff>)
+@a.completion.add(dcc list)
+@a.completion.add(dcc chat <stuff>
+@a.completion.add(dcc)
+
+it is not necessary to specify the toplevel command alone, or to do so first, if
+no such command exists.  Whether you do or do not is not particularly necessary.
+
+The sticky part is when the toplevel command can take arguments other than
+subcommands, in this case, the subcommands are checked for matching BEFORE the
+other syntax of the toplevel command is handled.
+
+Multiple depths are allowed, as well...
+
+If your command has aliases (most do) you can do
+@a.completion.alias(<command> <alias-list>) and the module will
+handle these appropriately.
+
+Command format:
+the format of the command is given with % tokens (%c, %n, etc), there are
+several of these, and the ability for users to specify their own lists is
+also provided, see below (case sensitivity is important here)
+
+%c - ONLY channels we are currently in
+%C - channels, including channels we are not in that are in the user
+     created list of 'favorite' channels
+%d - nicknames we know of from dcc chats or sends/gets
+%f - files
+%h - hostnames we know of from current channels
+%H - all hostnames, including current channels and 'favorites' added by
+     the user
+%m - nicknames we know of from messages (or notices); ctcps (and thereby
+     dcc *requests*) are considered to be messages as well.
+%n - nicknames we know of in current channels
+%N - nicknames we know of from current channels, or from messages/notices,
+     or from dcc chat (this is a conglomerate of %m+%n)
+%s - servers on our current network (in the list, this will not work if you
+     are on an unknown network.)
+%t - networks
+%"list" - this is a special syntax which allows the user to specify
+          a list of items that will be matched against, expansion is
+          also performed (i.e. each item you give it is a variable,
+          WITHOUT the $ expander! use %'' for regular text)
+          NB: only one of these can be used per format! the parser
+              cuts some corners and won't behave properly otherwise,
+              sorry, but, uh, what more do you need?
+%'list' - just like the above, but these are treated as words,
+          not variable names
+%+ - no completion done
+
+If more than one of the above can be given (i.e. a nick or channel) a list
+of the types can be specified with commas, e.g. for all nicks and channels,
+%N,c
+
+In addition, if an 'x' separated list of any of the above can be given, where
+'x' is the separator, this can be specified with the syntax
+%[sep]type (e.g. for a comma separated list of nicks from current channels:
+            %[,]n)
+Similarly, if a command takes a space separated list of the same type until the
+end of the command, the syntax %<type>* can be used (i.e. %n*) to indicate this.
+
+If the symbol %* is given, that means that there is no completion available to
+the end of the line. (%* is assumed, it is simply given for completeness)
+
+So, in the above dcc example, to add those commands:
+
+@a.completion.add(dcc send %N %f)
+@a.completion.add(dcc get %n)
+@a.completion.add(dcc list)
+@a.completion.add(dcc chat %N)
+@a.completion.add(dcc)
+
+these instructions should be placed in the file share/completion/<mod>,
+where <mod> is the name of the module definitions are being added for.  they
+can also be added in the module itself, but I don't recommend this.

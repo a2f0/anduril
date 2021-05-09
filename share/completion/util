@@ -1,0 +1,6 @@
+@a.completion.add(country %H)
+
+@a.completion.add(umode)
+
+@a.completion.add(nslookup %H,N)
+@a.completion.alias(nslookup dns)

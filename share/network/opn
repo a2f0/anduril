@@ -1,0 +1,11 @@
+# Automatically generated network definition for opn
+
+alias a.network.is_opn {
+	if (match(*.openprojects.net $0)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps opn lmots 30 4 u

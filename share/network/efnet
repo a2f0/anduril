@@ -1,0 +1,9 @@
+alias a.network.is_efnet {
+	if (rmatch($0 $a.network.efnet.list)) {
+		return 1
+	}{
+		return 0
+	}
+}
+
+a.network.caps efnet lmox 9 4 e

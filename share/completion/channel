@@ -1,0 +1,47 @@
+@a.completion.add(join %[,]C)
+@a.completion.alias(join j)
+
+@a.completion.add(part %[,]c)
+@a.completion.alias(part p)
+
+@a.completion.add(cycle %c)
+
+@a.completion.add(mode %c %n*)
+@a.completion.alias(mode c)
+
+@a.completion.add(op %n*)
+@a.completion.alias(op o)
+
+@a.completion.add(deop %n*)
+@a.completion.alias(deop do dop)
+
+@a.completion.add(voice %n*)
+@a.completion.alias(voice v)
+
+@a.completion.add(devoice %n*)
+@a.completion.alias(devoice dv dvoice)
+
+@a.completion.add(ban %[,]c,n %n*)
+@a.completion.alias(ban b)
+
+@a.completion.add(unban %N,c %N*)
+@a.completion.alias(unban ub)
+
+@a.completion.add(kick %[,]n,c %[,]n)
+@a.completion.alias(kick k)
+
+@a.completion.add(bankick %[,]n,c %[,]n)
+@a.completion.alias(bankick bk kb)
+
+@a.completion.add(tbk %+ %[,]n,c %[,]n)
+
+@a.completion.add(invite %N %c)
+@a.completion.alias(invite i)
+
+@a.completion.add(topic %c)
+@a.completion.alias(topic t)
+
+@a.completion.add(ame)
+
+@a.completion.add(asay)
+

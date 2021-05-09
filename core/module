@@ -1,0 +1,366 @@
+#############################################################################
+### $Id: module,v 1.9 2002/11/11 06:33:47 wd Exp $
+### module related aliases
+###
+ac.package
+
+###
+### ac.module.find(modulename)
+### tries to find a module with the name specified, and returns it, or
+### nothing.
+###
+
+alias ac.module.find (name) {
+    return $modules[$name][name]
+}
+
+### ac.module.load(modulename, loader) 
+###
+### loads module modulename
+###
+
+alias ac.module.load (module, loader) {
+    if (module == []) {
+	return
+    }
+	
+    ### ignore requests for already loaded modules
+    if (ac.module.find($module)) {
+	return
+    } elsif (fexist($apath/modules/$module/$module\.am) == -1) {
+	aerrecho Could not open module input file $module
+	return
+    }
+    ^assign -ac.module.current
+    @:loadstart = utime()
+    hook module_loadstart
+    ac.package $module
+    ### create the 'mstub' alias for temporary use while loading the module
+    stack push alias mstub
+    //^alias mstub stub alias $$* $apath/modules/$module/$module\.stubs
+
+    ### order change! because of the ridiculous amount of time required to
+    ### do fsets for every format (argh!) modules can no longer expect to
+    ### have formats available to them at load time.  sorry! hopefully this
+    ### will up module load time drastically.  load module, savefile, formats
+    hook module_loadprogress
+    load $apath/modules/$module/$module\.am 
+    ^alias -mstub
+    stack pop alias mstub
+    hook module_loadprogress
+	
+    ### if they have a savefile, load it, otherwise set config settings for
+    ### them
+    @:ifile=[$apath/etc/modules/$module\.save]
+    if (fexist($ifile) != -1) {
+	^eval load $ifile
+    } else {
+	fe ($modules[$module][configs][list]) xx {
+	@ac.config.set($xx $configs[$xx][value])
+	}
+    }
+    ### Formats are loaded, then the module is loaded, then
+    ### the savefile is loaded.  This order is important because of
+    ### the module outputting on load, but the need for change_cmds in saves
+    ### to reference actual things.  modules should never make assumptions
+    ### about the state of their save objects anyways!
+    @:ifile=[$apath/modules/$module/formats]
+    if (fexist($ifile) != -1) {
+	^eval load $apath/modules/$module/formats
+    }
+
+    ### set default formats for them
+    ### I kludged this up a little, we do the fset still, but if the format has a
+    ### set command, we also call that (after the module is loaded)
+    @:setcomms=[]
+    fe ($modules[$module][formats][list]) f {
+	if (![$(format_$f)]) {
+	    @fset($f $formats[$f][formats][0])
+	    if (formats[$f][set_command]) {
+		@:setcomms#=[$formats[$f][set_command] ]
+	    }
+	}
+    }
+    fe ($setcomms) f {
+	$(f) 0
+    }
+	
+    @:loadfinish = utime()
+    @:sec=word(0 $loadfinish) - word(0 $loadstart)
+    @:usec=word(1 $loadfinish) - word(1 $loadstart)
+    if (usec < 0) {
+	@usec+=1000000,sec--
+    }	
+	
+    @modules[$module][loadtime] = [${sec}\.${usec}]
+    @modules[$module][loadedat] = time()
+    @modules[$module][loader] = loader
+    ac.package
+    fe ($ac.module.list) xx {
+	@modules[$xx][needed]=[]
+    }
+    ### here we fix dependencies (in a very silly way), and also fix
+    ### the packaging info for module data structures (as best we can)
+    fe ($ac.module.list) xx {
+	fe ($modules[$xx][dep]) yy {
+	    @modules[$yy][needed]#=[ $xx]
+	}
+    }
+
+    hook module_loadprogress
+    hook module_loaded $module $modules[$module][version] $modules[$module][authemail] $modules[$module][authnick] $modules[$module][commands][count] $modules[$module][configs][count] $modules[$module][formats][count] ${sec}\.${usec}s $modules[$module][authname]
+    ^assign -ac.module.current
+}
+
+### :module, :command, :format, and :config.  commands used to add
+### module data for the user.
+alias :new (type, name, args) {
+    :$type $name new $args
+}
+
+alias :mod :module
+alias :module (name, command, args) {
+    if (command == []) {return}
+    switch ($command) {
+	(new) {
+	    @modules[$name][name] = name
+	    @modules[$name][version] = word(0 $args)
+	    @modules[$name][desc] = restw(1 $args)
+	    @modules[$name][authnick] = modules[$name][authname] = [(nobody)]
+	    @modules[$name][authemail] = [(nobody@nowhere)]
+	    @modules[$name][formats][count] = 0
+	    @modules[$name][commands][count] = 0
+	    @modules[$name][configs][count] = 0
+	    @ac.module.current = name
+	    @push(ac.module.list $name)
+	}
+	(author) {
+	    @modules[$name][authemail] = shift(args)
+	    @modules[$name][authnick] = shift(args)
+	    @modules[$name][authname] = args
+	}
+	(dep) (depend) {
+	    @modules[$name][dep] = args
+	    stack push assign ac.module.current
+	    fe ($args) xx {
+		@ac.module.load($xx depend \($name\))
+	    }
+	    stack pop assign ac.module.current
+	    ac.package $name
+	}
+	(version) (desc) (unload_cmd) (save_cmd) (help) {
+	    @modules[$name][$command] = args
+	}
+	(set) {
+	    @ac.module.current = name
+	}
+	(unset) {
+	    //^assign -ac.module.current
+	}
+	(meta) {
+	    @:tag = shift(args)
+	    @modules[$name][meta][$tag] = args
+	}
+    }
+}
+
+alias :comm :command
+alias :command (name, command, args) {
+    if (command == []) {return}
+    switch ($command) {
+	(new) {
+	    @commands[$name][name] = name
+	    @commands[$name][syntax] = args
+	    @commands[$name][desc] = [(no description)]
+	    @commands[$name][help] = [(no help)]
+	    @commands[$name][flags] = [ ]
+	    @commands[$name][module] = ac.module.current
+	    @push(ac.command.list $name)
+	    @modules[$ac.module.current][commands][$modules[$ac.module.current][commands][count]] = name
+	    @modules[$ac.module.current][commands][count]++
+	    @push(modules[$ac.module.current][commands][list] $name)
+	}
+	(aliases) {
+	    @commands[$name][aliases] = args
+	    fe ($args) xx {
+		//^alias $xx $name
+	    }
+	}
+	(syntax) (desc) (help) (flags) (xref) {
+	    @commands[$name][$command] = args
+	}
+    }
+}
+
+alias :form :format
+alias :format (name, command, args) {
+    if (command == []) {
+	return
+    }
+    switch ($command) {
+	(new) {
+	    @formats[$name][name] = name
+	    @formats[$name][desc] = args ? args : [(no description)]
+	    @formats[$name][variables][count] = 0
+	    @formats[$name][flags] = [ ]
+	    @formats[$name][formats][count] = 0
+	    @formats[$name][module] = ac.module.current
+	    @push(ac.format.list $name)
+	    @modules[$ac.module.current][formats][$modules[$ac.module.current][formats][count]] = name
+	    @modules[$ac.module.current][formats][count]++
+	    @push(modules[$ac.module.current][formats][list] $name)
+	}
+	(arguments) {
+	    @formats[$name][variables][list] = args
+	    fe ($args) xx {
+		@formats[$name][variables][$formats[$name][variables][count]] = xx
+		@formats[$name][variables][count]++
+	    }
+	}
+	(desc) (display_command) (flags) (help) (list_command) (set_command) \
+	(slaves) (xref) {
+	    @formats[$name][$command] = args
+	}
+    }
+}
+
+alias :conf :config
+alias :config (name, command, args) {
+    if (command == []) {
+	return
+    }
+
+    switch ($command) {
+	(new) {
+	    @configs[$name][name] = name
+	    @configs[$name][desc] = args ? args : [(no description)]
+	    @configs[$name][module] = ac.module.current
+	    @configs[$name][flags] = [ ]
+	    @push(ac.config.list $name)
+	    @modules[$ac.module.current][configs][$modules[$ac.module.current][configs][count]] = name
+	    @modules[$ac.module.current][configs][count]++
+	    @push(modules[$ac.module.current][configs][list] $name)
+	}
+	(change_cmd) (desc) (flags) (help) (input_command) (value) (xref) {
+	    @configs[$name][$command] = args
+	}
+    }
+}
+
+###
+### ac.module.pkgfix()
+### fixes package name settings for all aliases/variables as well as possible.
+### effectively, all core settings should be in 'ac.*' and will be packaged
+### under the name 'anduril', all module items should be in 'a.module.*', and
+### will be packaged under the name 'anduril(module)' where 'module' is the
+### name of the module.  this is called, typically, by ac.module.unload() below
+### but may also be called by other functions, and at the end of loading to
+### make everything appear neat :)
+
+alias ac.module.pkgfix {
+    ### clean up the structures for assigns and aliases
+    fe (alias assign) type {
+	@:list = aliasctl($type pmatch ac.*)
+	@push(:list aliasctl($type pmatch commands.*))
+	@push(:list aliasctl($type pmatch configs.*))
+	@push(:list aliasctl($type pmatch formats.*))
+	@push(:list aliasctl($type pmatch modules.*))
+	fe ($list) yy {
+	    @aliasctl($type setpackage $yy anduril)
+	}
+    }
+    
+    fe ($ac.module.list) xx {
+	fe (alias assign) type {
+	    fe ($aliasctl($type pmatch a.$xx\.*)) yy {
+		@aliasctl($type setpackage $yy anduril\($xx\))
+	    }
+	}
+    }
+}
+
+###
+### ac.module.unload(modulename type)
+### unloads the specified module, if found, and if it does not have any
+### other dependants.  Then rebuilds module dependencies.
+### if type is set to 'f', the unload will be forced.  if it set to 'r',
+### the unload will be recursive.
+###
+### I do not like the way I ended up doing this, but basically, we clean
+### up our modules' structures as well as possible, so basically, modules
+### which responsibly store stuff in 'a.<module>.*' win.  It *is* possible
+### to trounce things otherwise, so if you have variables that are going
+### to be twiddled by other modules (or if your functions which twiddle your
+### variables are going to be called by other modules) you need to use
+### the appropriate structure.
+###
+
+alias ac.module.unload (m, type) {
+    if (m == []) {
+	aerrecho must specify module name!
+	return
+    }
+	
+    if (ac.module.find($m) == []) {
+	aerrecho module $m not found!
+	return
+    }
+
+    if (type == [r]) {
+	fe ($modules[$m][needed]) xx {
+	    @ac.module.unload($xx r)
+	}
+    } elsif (word(0 $modules[$m][needed]) != [] && type != [f]) {
+	aerrecho module $m is required by module(s): $modules[$m][needed]
+	return
+    }
+	
+    ### save the module's settings first!
+    @ac.module.save($m)
+
+    ### if it has an unload command, execute it
+    $(modules[$m][unload_cmd])
+    
+    ac.module.pkgfix
+
+    ### wipe the module/command/config/format tables of anything belong to
+    ### this module.  oh yeah, this blows.
+
+    # modules structure first
+    fe ($aliasctl(assign pmatch modules.$m\.*)) xx {
+	//^assign -$xx
+    }
+    @ac.module.list = remw($m $ac.module.list)
+    ### okay, all we have to do here is remove this module from the 'needed'
+    ### fields of modules
+    fe ($ac.module.list) xx {
+	@modules[$xx][needed] = remw($m $modules[$xx][needed])
+    }
+
+    # and the rest
+    fe (command format config) type {
+	@:list = [ac.$type\.list]
+	fe ($($list)) xx {
+	    if ([$($type\s.$xx\.module)] == m) {
+		if (type == [command]) {
+		    fe ($commands[$xx][aliases]) yy {
+			//^alias -$yy
+		    }
+		}
+		fe ($aliasctl(assign pmatch $type\s.$xx\.*)) yy {
+		    //^assign -$yy
+		}
+		@$(list) = remw($xx $($list))
+	    }
+	}
+    }
+	
+    ### structures clean?  /unload!
+    //^unload anduril\($m\)
+
+	
+    hook module_unloaded $m
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+#############################################################################

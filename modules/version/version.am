@@ -1,0 +1,58 @@
+### $Id: version.am,v 1.22 2003/03/26 09:35:44 wd Exp $
+
+:new module version
+:mod version version 32
+:mod version desc various script version informations
+:mod version author wd@anduril.org White_Dragon Chip Norkus
+:mod version depend box
+
+:new command showversion [to]
+:comm showversion desc shows script's version
+:comm showversion aliases sv
+:comm showversion help \
+this simply displays the script's version to your current target ($T), or \
+the person/channel you specify.
+
+:new format show_version version display format
+:form show_version arguments @scriptver@ @clientver@ @clientbuild@ @hostname@ @osname@ @osver@ @arch@ @core@
+
+alias showversion (to) {
+    if (to == []) {
+	@:to = builtin_expando(T)
+    }
+    msg $to $fparse(show_version $aversion $builtin_expando(J) $builtin_expando(V) $uname(%n %s %r %m) $ac.version)
+}
+
+:new command about
+:comm about desc some greets and other things
+:comm about help displays a nice box about the script, that's all.
+
+alias about {
+    a.box.start about anduril $aversion
+    a.box.echo anduril version $aversion - by White_Dragon/WhiteDrgn
+    a.box.echo with help from a growing number of people who are listed in the README
+    a.box.echo 
+    @:fd=open($apath/RELEASE R)
+    if (fd >= 0) {
+	while (!eof($fd)) {
+	    a.box.echo $read($fd)
+	}
+	@close($fd)
+    }
+    a.box.end
+}
+
+:new command uptime
+:comm uptime desc displays the client's running time
+:comm uptime help \
+this command simply displays how long the client has been running.
+
+alias uptime {
+    msg $T client uptime: $tdiff3(${time()-builtin_expando(F)})
+}
+
+^eval on #-ctcp $ac.hash(version) "% % SOURCE" {
+    //^quote notice $0 :$chr(1)SOURCE client: http://www.epicsol.org/ script: http://anduril.org/script/$chr(1)
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

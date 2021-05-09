@@ -1,0 +1,11 @@
+# Automatically generated network definition for ircnet
+
+alias a.network.is_ircnet {
+	if (rmatch($0 $a.network.ircnet.list)) {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+a.network.caps ircnet lmoh 9 3 ee

@@ -1,0 +1,37 @@
+### $Id: xmms.stubs,v 1.3 2002/07/10 20:06:59 wd Exp $
+
+alias xmms (cmd, args) {
+	switch ($cmd) {
+		(find) {
+			@a.xmms.list.find = args
+			//^exec -in %epic-xmms match $args
+		}
+		(info) (pinfo) {
+			if (cmd == [pinfo]) {
+				 @a.xmms.pinfo = 1
+			} else {
+				 @a.xmms.pinfo = -1
+			}
+			//^exec -in %epic-xmms info
+		}
+		(jump) (prev) (next) (stop) (play) (pause) (shuffle) (repeat) {
+			//^exec -in %epic-xmms $cmd $args
+		}
+		(mute) {
+			//^exec -in %epic-xmms mute $a.xmms.volume
+		}
+		(skip) {
+			if (numwords(args) != 1) {
+				aerrecho you must provide a track number for the skip command
+				return
+			}
+			//^exec -in %epic-xmms jump * $args
+		}
+		(list) {
+			@a.xmms.list.list = 1
+			//^exec -in %epic-xmms match
+		}
+	}
+}
+
+# vim: syntax=off ts=3 ai smartindent

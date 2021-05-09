@@ -1,0 +1,12 @@
+# $Id: ratbox,v 1.4 2003/05/25 01:29:10 wd Exp $
+
+:module server set
+ac.package server
+
+eval load $apath/share/server/msg.client
+eval load $apath/share/server/msg.general
+eval load $apath/share/server/msg.kline.hybrid
+
+:module server unset
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:
+

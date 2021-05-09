@@ -1,0 +1,211 @@
+### $Id: ctcp.am,v 1.28 2002/11/11 05:53:01 wd Exp $
+
+:new module ctcp
+:mod ctcp version 44
+:mod ctcp desc ctcp handler module
+:mod ctcp author wd@anduril.org White_Dragon Chip Norkus
+:mod ctcp depend usage
+
+:new command ctcp <nick|#channel> <command> [args]
+:comm ctcp flags i
+:comm ctcp aliases
+:comm ctcp desc performs a /ctcp on the specified nicks/channels
+:comm ctcp help \
+this performs a ctcp request to the specified nick or channel of the \
+specified command (no, it's really simple, trust me)
+
+:new format ctcp_send echod when a ctcp request is sent
+:form ctcp_send flags i
+:form ctcp_send arguments @to@ @request@ @args@
+
+^on ^send_ctcp ^"PRIVMSG % ACTION *"
+^on ^send_ctcp ^"PRIVMSG % DCC *"
+^on ^send_ctcp "PRIVMSG % *" {
+    aecho $fparse(ctcp_send $1-)
+}
+
+mstub ctcp
+
+:new command version [server|nick|#channel]
+:comm version flags i
+:comm version aliases ver
+:comm version desc performs a /ctcp version on the specified nicks/channels, or a regular request on a server
+:comm version help \
+if passed a server, this command behaves exactly like the built-in version \
+command, querying the server's version.  otherwise it performs a SSCTCP \
+VERSION request on the specified nick. if no arguments are given, a \
+VERSION request is sent to the current target (channel or query) if you \
+the short form (/ver), if you use the long form (/version) a version \
+request is sent to the server
+
+mstub a.ctcp.version
+alias ver a.ctcp.version ver $*
+alias version a.ctcp.version version $*
+
+:new command ping [nick|#channel]
+:comm ping flags i
+:comm ping aliases
+:comm ping desc performs a /ctcp ping on the specified nicks/channels
+:comm ping help \
+this basically, well, uh, it pings people.  if no argument(s) are given, \
+the command pings the current target (channel or query)
+
+mstub ping
+
+:new format ctcp_recv echod when a ctcp is recieved (reply or request)
+:form ctcp_recv arguments @type@ @from@ @to@ @request@ @args@
+:form ctcp_recv flags i
+
+^on ^ctcp "*" {
+    aecho $fparse(ctcp_recv request $*)
+}
+
+:new format ctcp_version_reply format for the reply from a /ctcp version
+:form ctcp_version_reply arguments @script@ @epic@ @os@ @tag@
+:form ctcp_version_reply flags
+
+^on ^raw_irc "% PRIVMSG % :VERSION*" {
+    # check ignore bits.
+    @:types = igtype($rigmask($0))
+    if (findw(CTCPS $types) != -1 || findw(ALL $types) != -1) {
+	return
+    }
+
+    # determine cloaking:
+    if ((isnumber($ac.config(cloak)) && ac.config(cloak) > 1) || \
+	findw(version $ac.config(cloak)) != -1) {
+	@:cloaked = 1
+    }
+    if (!cloaked) {
+	//^notice $before(! $0) VERSION $fparse(ctcp_version_reply $aversion $builtin_expando(J)\[$info(i)\] $uname(%s[%r]) $randread($apath/share/reasons/version))
+	aecho $fparse(ctcp_recv request $before(! $0) $2 VERSION $before(-1  $4-))
+    } else {
+	aecho $fparse(ctcp_recv request $before(! $0) $2 VERSION $before(-1  $4-)) $cparse(%n\(cloaked\))
+    }
+}
+
+^on ^raw_irc "% PRIVMSG % :PING *" {
+    # check ignore bits.
+    @:types = igtype($rigmask($0))
+    if (findw(CTCPS $types) != -1 || findw(ALL $types) != -1) {
+	return
+    }
+
+    # determine cloaking:
+    if ((isnumber($ac.config(cloak)) && ac.config(cloak) > 2) || \
+	findw(ping $ac.config(cloak)) != -1) {
+	@:cloaked = 1
+    }
+    if (ac.config(cloak) < 3) {
+	//^notice $before(! $0) PING $4-
+	aecho $fparse(ctcp_recv request $before(! $0) $2 PING $before(-1  $4-))
+    } else {
+	aecho $fparse(ctcp_recv request $before(! $0) $2 PING $before(-1  $4-)) $cparse(%n\(cloaked\))
+    }
+}
+
+### hook actions and ignore them as far as ctcps go, but let the client do what it wants with them
+^on -raw_irc ^"% PRIVMSG % :ACTION*"
+
+
+# list of CTCPs EPIC has builtin handling for (less version/ping, handled
+# above)
+@a.ctcp.client_replies = [sed utc clientinfo userinfo errmsg finger time echo]
+
+### the cloak setting, this allows the user to ignore most ctcps
+:new config cloak avoid sending certain ctcp replies.
+:conf cloak value 0
+:conf cloak flags si
+:conf cloak help \
+this setting allows you to specify a list of CTCP requests to ignore, or a \
+specific level.  The levels are:%n \
+0: reply to all requests%n \
+1: reply to only PING and VERSION%n \
+2: reply to only PING%n \
+3: reply to nothing%n \
+You may also specify a list of CTCPs to forcibly ignore.  Currently, the \
+accepted values are sed, utc, version, clientinfo, userinfo, errmsg, finger, \
+time, ping, and echo.  note that this module is not responsible for extra \
+handlers added by other modules, and they should handle their replies in \
+their own way.  they may or may not respect your cloak setting.
+:conf cloak change_cmd a.ctcp.conf.cloak
+
+alias a.ctcp.conf.cloak {
+    # clean up from before..
+    for xx in ($a.ctcp.client_replies) {
+	^on raw_irc -"% PRIVMSG % :$xx\*"
+    }
+
+    @:block = []
+    if (isnumber($ac.config(cloak))) {
+	if (ac.config(cloak) > 0) {
+	    @:block = a.ctcp.client_replies
+	}
+    } else {
+	for xx in ($ac.config(cloak)) {
+	    if (findw($xx $a.ctcp.client_replies version ping) == -1) {
+		aecho warning: $xx is not handled by the cloak config
+	    } else {
+		@push(:block $xx)
+	    }
+	}
+    }
+    if (block != []) {
+	for xx in ($block) {
+	    ^on ^raw_irc "% PRIVMSG % :$xx\*" {
+		aecho $fparse(ctcp_recv request $before(! $0) $2 $after(: $strip( $3)) $before(-1  $4-)) $cparse(%n\(cloaked\))
+	    }
+	}
+    }
+}
+
+### use a raw irc to hook all ctcp replies
+### before anyone asks why, it is because EPIC
+### doesn't display who/what the reply is to.
+### to fix some breakage, we handle
+### the REJECT message for DCCs properly
+### in script.
+
+^on ^raw_irc "% NOTICE % :*" {
+    @:type = after( $3)
+    @:msg = before(-1  $4-))
+    switch ($type) {
+	(PING) {
+	    @:ut = utime()
+	    @:t = word(0 $ut) - word(0 $msg)
+	    @:f = tdiff3($t)
+	    # if they gave us a microseconds reply ...
+	    if (word(1 $msg) != []) {
+		@:u = word(1 $ut) - word(1 $msg)
+		# u might be negative, if so add value to 100000 to get the
+		# right value
+		if (u < 0) {
+		    @:u += 1000000 , s--
+		}
+		if (pass(s $f) == []) {
+		    @:f = [${f}0.$left(3 $u)s]
+		} else {
+		    @:f = [$before(s $f).$left(3 $u)s]
+		}
+	    }
+	    aecho $fparse(ctcp_recv reply $before(! $0) $2 $type $f)
+	}
+	(DCC) {
+	    if (msg =~ [REJECT *]) {
+		@:dtype=word(1 $msg)
+		@:dargs=restw(2 $msg)
+		if (dtype == [CHAT]) {
+		    //^dcc close chat $before(! $0)
+		} else {
+		    //^dcc close $dtype $before(! $0) $dargs
+		}
+	    }
+	    aecho $fparse(ctcp_recv reply $before(! $0) $2 $type $msg)
+	}
+	(*) {
+	    aecho $fparse(ctcp_recv reply $before(! $0) $2 $type $msg)
+	}
+    }
+}
+
+### vi:set ts=8 sts=4 sw=4 tw=79 syntax=off ai smartindent:

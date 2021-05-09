@@ -1,0 +1,6 @@
+@a.completion.add(xdcc offer %f)
+@a.completion.add(xdcc plist %c)
+@a.completion.add(xdcc pls %c)
+@a.completion.add(xdcc send %N)
+@a.completion.add(xdcc %'desc,doffer,list,load,ls,note,pass,password,save')
+
